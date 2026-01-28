@@ -330,4 +330,4 @@ Pour toute question ou problème :
 
 ---
 
-Fait avec 💖 par [Votre Nom]
+Fait avec 💖 par NeuTroNBZh aidé par l'IA

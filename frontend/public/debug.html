@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Debug API - Prix du coeur</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #eee; }
+    .section { margin: 20px 0; padding: 15px; background: #16213e; border-radius: 8px; }
+    h2 { color: #e94560; margin-bottom: 10px; }
+    pre { background: #0f0f23; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    .success { color: #4ade80; }
+    .error { color: #f87171; }
+    button { background: #e94560; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+    button:hover { background: #c93b52; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Debug API - Prix du coeur</h1>
+  
+  <div class="section">
+    <h2>Session</h2>
+    <pre id="session">Loading...</pre>
+  </div>
+
+  <div class="section">
+    <h2>Actions</h2>
+    <button onclick="testAPI('/api/health')">Test Health</button>
+    <button onclick="testAPI('/api/transactions/accounts')">Get Accounts</button>
+    <button onclick="testAPI('/api/harmonization')">Get Harmonization</button>
+    <button onclick="testAPI('/api/harmonization/history')">Get History</button>
+    <button onclick="testAPI('/api/auth/me')">Get User</button>
+  </div>
+
+  <div class="section">
+    <h2>Résultat API</h2>
+    <pre id="result">Click a button to test</pre>
+  </div>
+
+  <script>
+    // Check session
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    document.getElementById('session').textContent = JSON.stringify({
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 50) + '...' : null,
+      user: user ? JSON.parse(user) : null
+    }, null, 2);
+
+    async function testAPI(endpoint) {
+      const resultEl = document.getElementById('result');
+      resultEl.textContent = 'Loading...';
+      resultEl.className = '';
+      
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        
+        const response = await fetch(endpoint, { headers });
+        const data = await response.json();
+        
+        resultEl.textContent = `${response.status} ${response.statusText}\n\n${JSON.stringify(data, null, 2)}`;
+        resultEl.className = response.ok ? 'success' : 'error';
+      } catch (err) {
+        resultEl.textContent = 'Error: ' + err.message;
+        resultEl.className = 'error';
+      }
+    }
+  </script>
+</body>
+</html>

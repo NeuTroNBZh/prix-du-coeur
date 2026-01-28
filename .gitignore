@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+**/node_modules/
+vendor/
+
+# Environment variables (CRITIQUES - NE JAMAIS COMMITER)
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# Build
+dist/
+build/
+.cache/
+.next/
+frontend/dist/
+frontend/build/
+backend/dist/
+backend/build/
+
+# Logs
+logs/
+*.log
+backend/logs/
+backend/logs/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Database
+*.sql.backup
+*.dump
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# PM2
+.pm2/
+pids/
+*.pid
+*.seed
+
+# Git
+.git/index.lock

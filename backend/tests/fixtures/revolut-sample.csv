@@ -1,0 +1,22 @@
+Type,Produit,Date de début,Date de fin,Description,Montant,Frais,Devise,État,Solde
+Paiement par carte,Valeur actuelle,2025-12-29 14:49:59,2026-01-01 03:34:22,Steam,-10.00,0.00,EUR,TERMINÉ,43.28
+Paiement par carte,Valeur actuelle,2025-12-31 21:16:21,2026-01-01 10:59:46,Uber Eats,-23.84,0.00,EUR,TERMINÉ,19.44
+Ajout de fonds,Valeur actuelle,2026-01-01 18:49:45,2026-01-01 18:49:45,Paiement envoyé par M. CERCLE CHEMINEL LOUIS,50.00,0.00,EUR,TERMINÉ,69.44
+Changes,Valeur actuelle,2026-01-01 18:50:11,2026-01-01 18:50:11,Transfer to Revolut Digital Assets Europe Ltd,-0.38,0.00,EUR,TERMINÉ,69.06
+Paiement par carte,Valeur actuelle,2025-12-30 19:19:11,2026-01-02 03:10:14,BlaBlaCar,-18.19,0.00,EUR,TERMINÉ,50.87
+Remboursement sur carte,Valeur actuelle,2026-01-02 01:00:00,2026-01-02 10:22:22,Uber Eats,13.78,0.00,EUR,TERMINÉ,64.65
+Changes,Valeur actuelle,2026-01-02 12:09:42,2026-01-02 12:09:42,Transfer to Revolut Digital Assets Europe Ltd,-0.50,0.00,EUR,TERMINÉ,64.15
+Paiement par carte,Valeur actuelle,2026-01-01 18:50:11,2026-01-03 03:41:49,GameSeal,-43.62,0.00,EUR,TERMINÉ,20.53
+Paiement par carte,Valeur actuelle,2026-01-02 12:09:41,2026-01-03 16:17:33,Nabu Casa,-7.50,0.00,EUR,TERMINÉ,13.03
+Remboursement sur carte,Valeur actuelle,2026-01-03 01:00:00,2026-01-04 18:18:30,leboncoin,226.49,0.00,EUR,TERMINÉ,239.52
+Changes,Valeur actuelle,2026-01-04 20:23:05,2026-01-04 20:23:05,Transfer to Revolut Digital Assets Europe Ltd,-0.01,0.00,EUR,TERMINÉ,239.51
+Paiement par carte,Valeur actuelle,2026-01-04 20:23:04,2026-01-05 12:36:50,Canal+,-21.99,0.00,EUR,TERMINÉ,217.52
+Virement,Valeur actuelle,2026-01-10 12:53:27,2026-01-10 12:53:27,Virement à : INES MARCELLE SOPHIE BADIER,-13.90,0.00,EUR,TERMINÉ,142.62
+Changes,Valeur actuelle,2026-01-10 16:09:01,2026-01-10 16:09:01,Transfer to Revolut Digital Assets Europe Ltd,-0.06,0.00,EUR,TERMINÉ,142.56
+Paiement par carte,Valeur actuelle,2026-01-10 16:09:01,2026-01-11 14:40:57,Crep Coataudon,-4.94,0.00,EUR,TERMINÉ,137.62
+Ajout de fonds,Valeur actuelle,2026-01-13 19:47:51,2026-01-13 19:47:52,Paiement envoyé par M. CERCLE CHEMINEL LOUIS,40.00,0.00,EUR,TERMINÉ,134.62
+Ajout de fonds,Valeur actuelle,2026-01-16 21:06:35,2026-01-16 21:06:35,Paiement envoyé par M. CERCLE CHEMINEL LOUIS,237.49,0.00,EUR,TERMINÉ,269.11
+Ajout de fonds,Valeur actuelle,2026-01-16 21:08:41,2026-01-16 21:08:41,Paiement envoyé par M. CERCLE CHEMINEL LOUIS,550.00,0.00,EUR,TERMINÉ,819.11
+Virement,Valeur actuelle,2026-01-16 21:10:06,2026-01-16 21:10:08,To Louis Cercle-Cheminel,-550.00,0.00,EUR,TERMINÉ,268.60
+Paiement par carte,Valeur actuelle,2026-01-21 11:07:58,2026-01-21 16:30:30,GitHub,-0.86,0.00,EUR,TERMINÉ,16.11
+Paiement par carte,Valeur actuelle,2026-01-23 23:22:01,2026-01-25 06:22:04,Google Play,-0.53,0.01,EUR,TERMINÉ,20.09

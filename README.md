@@ -362,7 +362,7 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de 
 
 <div align="center">
 
-**Fait avec ❤️ pour simplifier la gestion financière des couples**
+**Fait avec 💖 par NeuTroNBZh aidé par l'IA**
 
 [Signaler un bug](https://github.com/NeuTroNBZh/prix-du-coeur/issues) · [Proposer une fonctionnalité](https://github.com/NeuTroNBZh/prix-du-coeur/issues)
 

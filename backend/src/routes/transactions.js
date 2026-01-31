@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const { authenticateToken } = require('../middleware/auth');
 const {
   uploadCSV,
@@ -18,10 +19,32 @@ const {
   getRecurringTransactions,
   getSubscriptionSettings,
   updateSubscriptionSetting,
-  updateSubscriptionCategory
+  updateSubscriptionCategory,
+  renameAccount,
+  toggleRecurring,
+  dismissSubscription,
+  restoreSubscription
 } = require('../controllers/transactionController');
 
 const router = express.Router();
+
+// ============================================
+// 🛡️ PROTECTION DDoS - Rate limiters spécifiques
+// ============================================
+
+// Rate limiter pour les uploads (coûteux en ressources)
+const uploadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 uploads par 15 minutes
+  message: { error: 'Trop d\'uploads', message: 'Veuillez attendre avant de réessayer' }
+});
+
+// Rate limiter pour les imports (opérations lourdes en BDD)
+const importLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 5, // 5 imports par 5 minutes
+  message: { error: 'Trop d\'imports', message: 'Veuillez attendre avant de réessayer' }
+});
 
 // Configure multer for file upload (memory storage, 10MB limit for PDFs)
 const upload = multer({
@@ -45,11 +68,11 @@ const upload = multer({
 // All routes require authentication
 router.use(authenticateToken);
 
-// Upload CSV to analyze and extract accounts
-router.post('/upload', upload.single('file'), uploadCSV);
+// Upload CSV to analyze and extract accounts (with rate limit)
+router.post('/upload', uploadLimiter, upload.single('file'), uploadCSV);
 
-// Import transactions from parsed JSON data
-router.post('/import', importTransactions);
+// Import transactions from parsed JSON data (with rate limit)
+router.post('/import', importLimiter, importTransactions);
 
 // Create manual transaction
 router.post('/', createTransaction);
@@ -72,6 +95,12 @@ router.put('/subscriptions/settings', updateSubscriptionSetting);
 // Update subscription category (change category for all transactions of a subscription)
 router.put('/subscriptions/category', updateSubscriptionCategory);
 
+// Dismiss subscription (mark as not recurring / cancelled)
+router.post('/subscriptions/dismiss', dismissSubscription);
+
+// Restore a dismissed subscription
+router.delete('/subscriptions/dismiss', restoreSubscription);
+
 // Get transactions with filters
 router.get('/', getTransactions);
 
@@ -87,8 +116,14 @@ router.patch('/:id/label', updateTransactionLabel);
 // Update transaction amount
 router.patch('/:id/amount', updateTransactionAmount);
 
+// Toggle recurring status
+router.patch('/:id/recurring', toggleRecurring);
+
 // Set initial balance for an account
 router.put('/accounts/:accountId/balance', setInitialBalance);
+
+// Rename an account
+router.put('/accounts/:accountId/name', renameAccount);
 
 // Get balance evolution for an account
 router.get('/accounts/:accountId/evolution', getBalanceEvolution);

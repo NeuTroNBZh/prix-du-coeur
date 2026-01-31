@@ -1,0 +1,121 @@
+# ============================================
+# 🛡️ FAIL2BAN - Configuration Prix du Coeur
+# ============================================
+# Protège contre:
+# - Bruteforce login
+# - Scan de vulnérabilités
+# - Injection SQL/XSS
+# - Rate limit abuse (429)
+# - Bots malveillants
+# ============================================
+
+[DEFAULT]
+# ============================================
+# 🔓 IPs WHITELISTÉES - JAMAIS BANNIES
+# ============================================
+# localhost + IPs Tailscale spécifiques + IPs dédiées
+ignoreip = 127.0.0.1/8 ::1 100.96.147.109 100.84.130.22 100.71.217.16 100.121.109.109 100.95.29.90 100.111.165.71 100.69.144.120 100.90.249.33 37.59.99.20 130.93.99.67
+
+# Ban 1 heure par défaut
+bantime = 3600
+# Fenêtre de détection: 10 minutes
+findtime = 600
+# Max 5 échecs avant ban
+maxretry = 5
+# Notification par email (optionnel)
+# destemail = votre@email.com
+# sender = fail2ban@votreserveur.com
+# action = %(action_mwl)s
+
+# ============================================
+# PROTECTION SSH (déjà active par défaut)
+# ============================================
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 86400
+
+# ============================================
+# PROTECTION NGINX - Rate Limit (429)
+# ============================================
+# Bloque les IPs qui déclenchent trop de 429
+[nginx-limit-req]
+enabled = true
+filter = nginx-limit-req
+logpath = /var/log/nginx/error.log
+maxretry = 10
+findtime = 60
+bantime = 3600
+
+# ============================================
+# PROTECTION NGINX - Mauvaises requêtes (400/444)
+# ============================================
+[nginx-http-auth]
+enabled = true
+filter = nginx-http-auth
+logpath = /var/log/nginx/prix-du-coeur-error.log
+maxretry = 5
+bantime = 3600
+
+# ============================================
+# PROTECTION API - Bruteforce Login
+# ============================================
+# Détecte les tentatives de login échouées
+[prix-du-coeur-auth]
+enabled = true
+filter = prix-du-coeur-auth
+logpath = /var/log/nginx/prix-du-coeur-access.log
+maxretry = 10
+findtime = 300
+bantime = 7200
+
+# ============================================
+# PROTECTION API - Bruteforce 2FA (plus tolérant)
+# ============================================
+# Les utilisateurs font parfois des typos sur les codes OTP
+# Donc on est plus tolérant ici (15 essais sur 10 min)
+[prix-du-coeur-2fa]
+enabled = true
+filter = prix-du-coeur-2fa
+logpath = /var/log/nginx/prix-du-coeur-access.log
+maxretry = 15
+findtime = 600
+bantime = 1800
+
+# ============================================
+# PROTECTION API - Scan de vulnérabilités
+# ============================================
+# Détecte les scanners comme nikto, sqlmap, etc.
+[prix-du-coeur-scanner]
+enabled = true
+filter = prix-du-coeur-scanner
+logpath = /var/log/nginx/prix-du-coeur-access.log
+maxretry = 5
+findtime = 60
+bantime = 86400
+
+# ============================================
+# PROTECTION API - Tentatives d'injection
+# ============================================
+# Détecte SQL injection, XSS, path traversal
+[prix-du-coeur-injection]
+enabled = true
+filter = prix-du-coeur-injection
+logpath = /var/log/nginx/prix-du-coeur-access.log
+maxretry = 3
+findtime = 300
+bantime = 604800
+
+# ============================================
+# PROTECTION - Bots agressifs
+# ============================================
+[nginx-botsearch]
+enabled = true
+filter = nginx-botsearch
+logpath = /var/log/nginx/prix-du-coeur-access.log
+maxretry = 5
+findtime = 60
+bantime = 86400

@@ -1,7 +1,9 @@
 const crypto = require('crypto');
 const pool = require('../config/database');
 const ParserFactory = require('../utils/parsers/ParserFactory');
-const CMBPdfParser = require('../utils/parsers/CMBPdfParser');
+const PdfParserFactory = require('../utils/parsers/PdfParserFactory');
+const { isValidId } = require('../utils/validation');
+const { encrypt, decrypt, decryptTransactions, isEncrypted, hashLabel } = require('../services/encryptionService');
 
 /**
  * Generate checksum for transaction to detect duplicates
@@ -26,8 +28,8 @@ const uploadCSV = async (req, res) => {
 
     // Check if it's a PDF file
     if (fileName.endsWith('.pdf')) {
-      console.log('📄 PDF file detected, using CMB parser');
-      const result = await CMBPdfParser.parsePdf(req.file.buffer);
+      console.log('📄 PDF file detected, auto-detecting bank...');
+      const result = await PdfParserFactory.parsePdf(req.file.buffer);
       
       if (!result.success) {
         return res.status(400).json({ 
@@ -36,7 +38,7 @@ const uploadCSV = async (req, res) => {
         });
       }
       
-      return res.status(200).json({
+      const response = {
         message: 'PDF analyzed successfully',
         bank: result.bank,
         bankDisplay: result.bankDisplay,
@@ -45,7 +47,11 @@ const uploadCSV = async (req, res) => {
         transactions: result.transactions,
         fileSize: req.file.size,
         isPdf: true
-      });
+      };
+      
+      console.log('📤 Sending response with', response.transactions?.length || 0, 'transactions');
+      
+      return res.status(200).json(response);
     }
 
     // CSV processing (existing logic)
@@ -181,12 +187,16 @@ const importTransactions = async (req, res) => {
         continue;
       }
 
-      // Insert transaction
+      // Encrypt sensitive data before storing
+      const encryptedLabel = encrypt(tx.label);
+      const labelHash = hashLabel(tx.label);
+
+      // Insert transaction with encrypted label and hash for grouping
       await client.query(
         `INSERT INTO transactions 
-         (couple_id, user_id, account_id, date, amount, label, category, csv_checksum)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [coupleId, userId, accountId, tx.date, tx.amount, tx.label, tx.category || 'Autre', checksum]
+         (couple_id, user_id, account_id, date, amount, label, label_hash, category, csv_checksum)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [coupleId, userId, accountId, tx.date, tx.amount, encryptedLabel, labelHash, tx.category || 'Autre', checksum]
       );
       inserted++;
     }
@@ -223,7 +233,7 @@ const getAccounts = async (req, res) => {
 
     // Calculate balance = reference_balance + sum of transactions AFTER reference_date
     const result = await pool.query(
-      `SELECT a.id, a.bank_name, a.account_number, a.name AS account_label, 
+      `SELECT a.id, a.bank_name, a.account_number, COALESCE(a.account_label, a.name) AS account_label, 
               a.reference_balance, a.reference_date, a.created_at,
               COUNT(t.id) as transaction_count,
               COALESCE(a.reference_balance, 0) + COALESCE(
@@ -269,7 +279,7 @@ const getTransactions = async (req, res) => {
 
     let query = `
       SELECT t.id, t.date, t.label, t.amount, t.category, t.type, 
-             t.account_id, a.name AS account_label, a.bank_name
+             t.account_id, COALESCE(a.account_label, a.name) AS account_label, a.bank_name
       FROM transactions t
       LEFT JOIN accounts a ON t.account_id = a.id
       WHERE t.user_id = $1
@@ -306,9 +316,12 @@ const getTransactions = async (req, res) => {
 
     const result = await pool.query(query, params);
 
+    // Decrypt labels before sending to client
+    const decryptedTransactions = decryptTransactions(result.rows);
+
     res.status(200).json({
-      transactions: result.rows,
-      count: result.rows.length
+      transactions: decryptedTransactions,
+      count: decryptedTransactions.length
     });
   } catch (err) {
     console.error('Get transactions error:', err);
@@ -520,7 +533,7 @@ const getBalanceEvolution = async (req, res) => {
 const createTransaction = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { amount, label, category, date, type } = req.body;
+    const { amount, label, category, date, type, isRecurring, accountId } = req.body;
 
     if (!amount || !label) {
       return res.status(400).json({ error: 'Amount and label are required' });
@@ -534,46 +547,68 @@ const createTransaction = async (req, res) => {
 
     const coupleId = coupleResult.rows.length > 0 ? coupleResult.rows[0].id : null;
 
-    // Get or create default account
-    let accountResult = await pool.query(
-      `SELECT id FROM accounts WHERE user_id = $1 LIMIT 1`,
-      [userId]
-    );
-
-    let accountId;
-    if (accountResult.rows.length === 0) {
-      const newAccount = await pool.query(
-        `INSERT INTO accounts (user_id, bank_name, account_number, name)
-         VALUES ($1, 'Manuel', 'manual', 'Dépenses manuelles')
-         RETURNING id`,
+    // Get account - use provided accountId or default to first account
+    let finalAccountId;
+    if (accountId) {
+      // Verify the account belongs to this user
+      const accountCheck = await pool.query(
+        `SELECT id FROM accounts WHERE id = $1 AND user_id = $2`,
+        [accountId, userId]
+      );
+      if (accountCheck.rows.length > 0) {
+        finalAccountId = accountId;
+      }
+    }
+    
+    if (!finalAccountId) {
+      // Get or create default account
+      let accountResult = await pool.query(
+        `SELECT id FROM accounts WHERE user_id = $1 LIMIT 1`,
         [userId]
       );
-      accountId = newAccount.rows[0].id;
-    } else {
-      accountId = accountResult.rows[0].id;
+
+      if (accountResult.rows.length === 0) {
+        const newAccount = await pool.query(
+          `INSERT INTO accounts (user_id, bank_name, account_number, name)
+           VALUES ($1, 'Manuel', 'manual', 'Dépenses manuelles')
+           RETURNING id`,
+          [userId]
+        );
+        finalAccountId = newAccount.rows[0].id;
+      } else {
+        finalAccountId = accountResult.rows[0].id;
+      }
     }
 
-    // Insert transaction
+    // Insert transaction with encrypted label and hash for grouping
+    const encryptedLabel = encrypt(label);
+    const labelHash = hashLabel(label);
     const result = await pool.query(
       `INSERT INTO transactions 
-       (couple_id, user_id, account_id, date, amount, label, category, type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, date, amount, label, category, type`,
+       (couple_id, user_id, account_id, date, amount, label, label_hash, category, type, is_recurring)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, date, amount, label, category, type, is_recurring`,
       [
         coupleId, 
         userId, 
-        accountId, 
+        finalAccountId, 
         date || new Date().toISOString().split('T')[0], 
         parseFloat(amount),
-        label,
+        encryptedLabel,
+        labelHash,
         category || 'Autre',
-        type || 'individuelle'
+        type || 'individuelle',
+        isRecurring || false
       ]
     );
 
+    // Decrypt label before returning to client
+    const transaction = result.rows[0];
+    transaction.label = decrypt(transaction.label);
+
     res.status(201).json({
       message: 'Transaction created',
-      transaction: result.rows[0]
+      transaction: transaction
     });
   } catch (err) {
     console.error('Create transaction error:', err);
@@ -592,6 +627,11 @@ const deleteTransaction = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
+
+    // Validate ID parameter to prevent injection
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: 'Invalid transaction ID' });
+    }
 
     // Check ownership
     const check = await pool.query(
@@ -625,9 +665,17 @@ const updateTransactionLabel = async (req, res) => {
     const { id } = req.params;
     const { label } = req.body;
 
+    // Validate ID parameter
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: 'Invalid transaction ID' });
+    }
+
     if (!label || label.trim().length === 0) {
       return res.status(400).json({ error: 'Label is required' });
     }
+
+    // Sanitize label - limit length and remove potential XSS
+    const sanitizedLabel = label.trim().substring(0, 500);
 
     // Check ownership
     const check = await pool.query(
@@ -639,12 +687,16 @@ const updateTransactionLabel = async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
+    // Encrypt the label and generate hash before storing
+    const encryptedLabel = encrypt(sanitizedLabel);
+    const labelHash = hashLabel(sanitizedLabel);
+
     await pool.query(
-      `UPDATE transactions SET label = $1 WHERE id = $2`,
-      [label.trim(), id]
+      `UPDATE transactions SET label = $1, label_hash = $2 WHERE id = $3`,
+      [encryptedLabel, labelHash, id]
     );
 
-    res.status(200).json({ message: 'Label updated', label: label.trim() });
+    res.status(200).json({ message: 'Label updated', label: sanitizedLabel });
   } catch (err) {
     console.error('Update transaction label error:', err);
     res.status(500).json({ 
@@ -664,6 +716,11 @@ const updateTransactionAmount = async (req, res) => {
     const { id } = req.params;
     const { amount } = req.body;
 
+    // Validate ID parameter
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: 'Invalid transaction ID' });
+    }
+
     if (amount === undefined || amount === null) {
       return res.status(400).json({ error: 'Amount is required' });
     }
@@ -671,6 +728,11 @@ const updateTransactionAmount = async (req, res) => {
     const parsedAmount = parseFloat(amount);
     if (isNaN(parsedAmount)) {
       return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    // Validate amount range (reasonable limits)
+    if (parsedAmount < -1000000 || parsedAmount > 1000000) {
+      return res.status(400).json({ error: 'Amount out of valid range' });
     }
 
     // Check ownership - either direct owner or via couple
@@ -710,8 +772,21 @@ const updateTransactionType = async (req, res) => {
     const { id } = req.params;
     const { type, ratio } = req.body;
 
-    if (!type || !['commune', 'individuelle', 'abonnement'].includes(type)) {
+    // Validate ID parameter
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: 'Invalid transaction ID' });
+    }
+
+    if (!type || !['commune', 'individuelle', 'abonnement', 'virement_interne'].includes(type)) {
       return res.status(400).json({ error: 'Invalid type' });
+    }
+
+    // Validate ratio if provided
+    if (ratio !== undefined) {
+      const parsedRatio = parseFloat(ratio);
+      if (isNaN(parsedRatio) || parsedRatio < 0 || parsedRatio > 1) {
+        return res.status(400).json({ error: 'Ratio must be between 0 and 1' });
+      }
     }
 
     // Check ownership via couple
@@ -815,11 +890,12 @@ const getAnalytics = async (req, res) => {
     `;
     const incomeResult = await pool.query(incomeQuery, params);
 
-    // Build byCategory object for frontend
-    const byCategory = {};
-    categoryResult.rows.forEach(row => {
-      byCategory[row.category] = -parseFloat(row.total); // Negative for expenses
-    });
+    // Build byCategory array for frontend (same format as filteredAnalytics)
+    const byCategory = categoryResult.rows.map(row => ({
+      category: row.category,
+      total: parseFloat(row.total),
+      count: parseInt(row.count)
+    }));
 
     res.status(200).json({
       byCategory: byCategory,
@@ -845,8 +921,30 @@ const getRecurringTransactions = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // Find potential recurring transactions by grouping similar amounts and labels
-    const query = `
+    // Get ALL transactions marked as recurring (is_recurring = true)
+    // This includes subscriptions, rent, school payments, etc.
+    const allSubsQuery = `
+      SELECT 
+        id,
+        label,
+        ABS(amount) as amount,
+        category,
+        type,
+        date,
+        is_recurring
+      FROM transactions
+      WHERE user_id = $1 
+        AND amount < 0 
+        AND is_recurring = true
+      ORDER BY date DESC
+    `;
+    const allSubsResult = await pool.query(allSubsQuery, [userId]);
+    // Decrypt labels from subscription transactions
+    const decryptedAllSubs = decryptTransactions(allSubsResult.rows);
+
+    // Also get recurring by exact label match (old method, for non-subscription recurring)
+    // Only include transactions where is_recurring is NOT explicitly set to false
+    const exactMatchQuery = `
       WITH transaction_groups AS (
         SELECT 
           label,
@@ -858,7 +956,8 @@ const getRecurringTransactions = async (req, res) => {
           MIN(date) as first_date,
           MAX(date) as last_date
         FROM transactions
-        WHERE user_id = $1 AND amount < 0
+        WHERE user_id = $1 AND amount < 0 AND type != 'abonnement' AND category != 'Abonnements'
+          AND (is_recurring IS NULL OR is_recurring = true)
         GROUP BY label, ABS(amount), category
         HAVING COUNT(*) >= 2
       )
@@ -880,67 +979,197 @@ const getRecurringTransactions = async (req, res) => {
       WHERE occurrence_count >= 2
       ORDER BY occurrence_count DESC, abs_amount DESC
     `;
+    const exactMatchResult = await pool.query(exactMatchQuery, [userId]);
 
-    const result = await pool.query(query, [userId]);
+    // Get subscription settings to use user-configured frequency
+    let subscriptionSettingsMap = {};
+    let coupleId = null;
+    try {
+      const coupleResult = await pool.query(
+        `SELECT id FROM couples WHERE user1_id = $1 OR user2_id = $1 LIMIT 1`,
+        [userId]
+      );
+      if (coupleResult.rows.length > 0) {
+        coupleId = coupleResult.rows[0].id;
+        const settingsResult = await pool.query(
+          `SELECT label, amount, frequency FROM subscription_settings WHERE couple_id = $1`,
+          [coupleId]
+        );
+        settingsResult.rows.forEach(s => {
+          const key = `${s.label}_${parseFloat(s.amount)}`;
+          subscriptionSettingsMap[key] = s;
+        });
+      }
+    } catch (e) {
+      console.error('Error fetching subscription settings:', e);
+    }
 
-    // Also get transactions categorized as "Abonnements" that might not be recurring yet
-    const categoryQuery = `
-      SELECT DISTINCT ON (label, ABS(amount))
-        id,
-        label,
-        ABS(amount) as amount,
-        category,
-        date as last_date,
-        date as first_date
-      FROM transactions
-      WHERE user_id = $1 
-        AND amount < 0 
-        AND category = 'Abonnements'
-      ORDER BY label, ABS(amount), date DESC
-    `;
-    const categoryResult = await pool.query(categoryQuery, [userId]);
+    // Helper to normalize label for grouping (remove variable parts like reference numbers)
+    const normalizeLabel = (label) => {
+      // Remove common variable suffixes (reference numbers, dates, etc.)
+      let normalized = label
+        // Date ranges: "24-09-2025 / 21-10-2025" at end
+        .replace(/\s*\d{2}-\d{2}-\d{4}\s*\/\s*\d{2}-\d{2}-\d{4}$/i, '')
+        // PayPal: "PRLV SEPA PAYPAL EUROPE S A R L 1047266057968" -> "PRLV SEPA PAYPAL EUROPE S A R L"
+        .replace(/\s+\d{10,}.*$/i, '')  // Remove 10+ digit sequences at end (PayPal refs)
+        // Basic Fit: "BASIC FIT FRANCE NO676006827-0152 2" -> "BASIC FIT FRANCE"
+        .replace(/\s+NO\d+[-/]?\d*\s*\d*$/i, '')  // Remove "NO123456-0152 2" patterns
+        // Amazon: "AMAZON EU SARL SUCCU D01-5206223-03" -> "AMAZON EU SARL SUCCU"
+        .replace(/\s+[A-Z]\d{2}-\d+[-/]?\d*$/i, '')  // Remove "D01-12345-03" patterns
+        // Pathé: "PATHE CINEPASS XST7PQ53CV39DJX3 PAT" -> "PATHE CINEPASS"
+        .replace(/\s+[A-Z0-9]{12,}.*$/i, '')  // Remove 12+ char alphanumeric codes and what follows
+        // General alphanumeric codes
+        .replace(/\s+[A-Z0-9]{10,}$/i, '')  // Remove 10+ char alphanumeric codes at end
+        // General number cleanup
+        .replace(/\s+\d{6,}$/i, '')  // Remove 6+ digit numbers at end
+        // Remove trailing spaces and numbers
+        .trim()
+        .replace(/\s+\d+\s*$/i, '')
+        .trim();
+      return normalized || label;
+    };
 
-    // Process results to categorize by frequency
-    const now = new Date();
-    const twoMonthsAgo = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000)); // 60 days ago
-    
-    const recurring = result.rows.map(row => {
+    // Group subscription transactions by normalized label + similar amount
+    const subsGroups = {};
+    decryptedAllSubs.forEach(tx => {
+      const normalizedLabel = normalizeLabel(tx.label);
+      const amount = parseFloat(tx.amount);
+      
+      // Find existing group with similar label and amount (within 10% or 2€)
+      let foundGroup = null;
+      for (const key of Object.keys(subsGroups)) {
+        const group = subsGroups[key];
+        const labelMatch = group.normalizedLabel === normalizedLabel;
+        const amountDiff = Math.abs(group.amount - amount);
+        const percentDiff = amountDiff / Math.max(group.amount, amount);
+        const amountMatch = percentDiff < 0.15 || amountDiff < 2.0;
+        
+        if (labelMatch && amountMatch) {
+          foundGroup = key;
+          break;
+        }
+      }
+      
+      if (foundGroup) {
+        const group = subsGroups[foundGroup];
+        group.transactions.push(tx);
+        group.transactionIds.push(tx.id);
+        // Update amount to average
+        group.totalAmount += amount;
+        group.amount = group.totalAmount / group.transactions.length;
+        // Update dates
+        const txDate = new Date(tx.date);
+        if (txDate > new Date(group.lastDate)) {
+          group.lastDate = tx.date;
+          group.label = tx.label; // Use most recent label
+        }
+        if (txDate < new Date(group.firstDate)) {
+          group.firstDate = tx.date;
+        }
+      } else {
+        // Create new group
+        const key = `${normalizedLabel}_${Math.round(amount)}`;
+        subsGroups[key] = {
+          label: tx.label,
+          normalizedLabel,
+          amount,
+          totalAmount: amount,
+          category: tx.category || 'Abonnements',
+          transactions: [tx],
+          transactionIds: [tx.id],
+          firstDate: tx.date,
+          lastDate: tx.date
+        };
+      }
+    });
+
+    // Helper to check if subscription is active based on frequency
+    const checkIsActive = (lastDate, frequency) => {
+      const now = new Date();
+      const lastPayment = new Date(lastDate);
+      const daysSinceLast = Math.floor((now - lastPayment) / (1000 * 60 * 60 * 24));
+      
+      switch (frequency) {
+        case 'monthly':
+        case 'manual':
+          return daysSinceLast <= 60; // 2 months grace period
+        case 'weekly':
+          return daysSinceLast <= 21; // 3 weeks
+        case 'quarterly':
+          return daysSinceLast <= 120; // 4 months
+        case 'semiannual':
+          return daysSinceLast <= 210; // 7 months
+        case 'yearly':
+          return daysSinceLast <= 400; // 13 months
+        default:
+          return daysSinceLast <= 60;
+      }
+    };
+
+    // Convert groups to subscription objects
+    const subscriptionsFromType = Object.values(subsGroups).map(group => {
+      const occurrences = group.transactions.length;
+      const firstDate = new Date(group.firstDate);
+      const lastDate = new Date(group.lastDate);
+      
+      // Detect frequency from occurrences
+      let detectedFrequency = 'manual';
+      if (occurrences >= 2) {
+        const totalDays = (lastDate - firstDate) / (1000 * 60 * 60 * 24);
+        const avgDays = totalDays / (occurrences - 1);
+        
+        if (avgDays >= 25 && avgDays <= 35) detectedFrequency = 'monthly';
+        else if (avgDays >= 6 && avgDays <= 8) detectedFrequency = 'weekly';
+        else if (avgDays >= 85 && avgDays <= 100) detectedFrequency = 'quarterly';
+        else if (avgDays >= 175 && avgDays <= 195) detectedFrequency = 'semiannual';
+        else if (avgDays >= 350 && avgDays <= 380) detectedFrequency = 'yearly';
+      }
+      
+      // Check for user-configured frequency
+      const key = `${group.label}_${group.amount}`;
+      const userSettings = subscriptionSettingsMap[key];
+      const effectiveFrequency = userSettings?.frequency || detectedFrequency;
+      
+      // Calculate avg day of month
+      const daysOfMonth = group.transactions.map(t => new Date(t.date).getDate());
+      const avgDayOfMonth = Math.round(daysOfMonth.reduce((a, b) => a + b, 0) / daysOfMonth.length);
+      
+      return {
+        label: group.label,
+        amount: parseFloat(group.amount.toFixed(2)),
+        category: group.category,
+        occurrences,
+        frequency: effectiveFrequency,
+        detectedFrequency,
+        avgDayOfMonth,
+        firstDate: group.firstDate,
+        lastDate: group.lastDate,
+        transactionIds: group.transactionIds,
+        isActive: checkIsActive(group.lastDate, effectiveFrequency),
+        isFromSubscriptionType: true
+      };
+    });
+
+    // Process exact-match recurring (non-subscription type)
+    const exactMatchRecurring = exactMatchResult.rows.map(row => {
       const avgDays = row.avg_interval_days;
-      let frequency = 'irregular';
+      let detectedFrequency = 'irregular';
       let nextExpectedDate = null;
       const lastDate = new Date(row.last_date);
 
       if (avgDays) {
-        // More flexible ranges to account for billing variations
-        if (avgDays >= 25 && avgDays <= 35) {
-          frequency = 'monthly';
-        } else if (avgDays >= 6 && avgDays <= 8) {
-          frequency = 'weekly';
-        } else if (avgDays >= 85 && avgDays <= 100) {
-          frequency = 'quarterly';
-        } else if (avgDays >= 175 && avgDays <= 195) {
-          frequency = 'semiannual';
-        } else if (avgDays >= 350 && avgDays <= 380) {
-          frequency = 'yearly';
-        }
+        if (avgDays >= 25 && avgDays <= 35) detectedFrequency = 'monthly';
+        else if (avgDays >= 6 && avgDays <= 8) detectedFrequency = 'weekly';
+        else if (avgDays >= 85 && avgDays <= 100) detectedFrequency = 'quarterly';
+        else if (avgDays >= 175 && avgDays <= 195) detectedFrequency = 'semiannual';
+        else if (avgDays >= 350 && avgDays <= 380) detectedFrequency = 'yearly';
 
-        // Calculate next expected date
         nextExpectedDate = new Date(lastDate.getTime() + (avgDays * 24 * 60 * 60 * 1000));
       }
 
-      // Check if subscription is still active (last payment within 2 months for monthly, or appropriate window)
-      let isActive = true;
-      if (frequency === 'monthly' && lastDate < twoMonthsAgo) {
-        isActive = false;
-      } else if (frequency === 'weekly' && lastDate < new Date(now.getTime() - (21 * 24 * 60 * 60 * 1000))) {
-        isActive = false; // 3 weeks without payment
-      } else if (frequency === 'quarterly' && lastDate < new Date(now.getTime() - (120 * 24 * 60 * 60 * 1000))) {
-        isActive = false; // 4 months without payment
-      } else if (frequency === 'yearly' && lastDate < new Date(now.getTime() - (400 * 24 * 60 * 60 * 1000))) {
-        isActive = false; // 13 months without payment
-      }
-
-      // Calculate average day of month
+      const key = `${row.label}_${parseFloat(row.amount)}`;
+      const userSettings = subscriptionSettingsMap[key];
+      const effectiveFrequency = userSettings?.frequency || detectedFrequency;
       const daysOfMonth = row.dates.map(d => new Date(d).getDate());
       const avgDayOfMonth = Math.round(daysOfMonth.reduce((a, b) => a + b, 0) / daysOfMonth.length);
 
@@ -949,154 +1178,90 @@ const getRecurringTransactions = async (req, res) => {
         amount: parseFloat(row.amount),
         category: row.category,
         occurrences: row.occurrence_count,
-        frequency,
+        frequency: effectiveFrequency,
+        detectedFrequency,
         avgIntervalDays: avgDays,
         avgDayOfMonth,
         firstDate: row.first_date,
         lastDate: row.last_date,
         nextExpected: nextExpectedDate,
         transactionIds: row.ids,
-        isActive
+        isActive: checkIsActive(row.last_date, effectiveFrequency)
       };
     });
 
-    // Merge similar subscriptions (same label with slightly different amounts)
-    // This handles cases like "Achat: Google Play" at 0.53€ and 0.54€
-    const mergedRecurring = [];
-    for (const sub of recurring) {
-      // Find existing subscription with same label and similar amount (within 10% or 1€)
-      const existing = mergedRecurring.find(m => {
-        if (m.label !== sub.label) return false;
-        const amountDiff = Math.abs(m.amount - sub.amount);
-        const percentDiff = amountDiff / Math.max(m.amount, sub.amount);
-        return percentDiff < 0.10 || amountDiff < 1.0;
-      });
-      
-      if (existing) {
-        // Merge: combine occurrences, use average amount, update dates
-        existing.occurrences += sub.occurrences;
-        existing.amount = (existing.amount * (existing.occurrences - sub.occurrences) + sub.amount * sub.occurrences) / existing.occurrences;
-        existing.transactionIds = [...existing.transactionIds, ...sub.transactionIds];
-        if (new Date(sub.lastDate) > new Date(existing.lastDate)) {
-          existing.lastDate = sub.lastDate;
-          existing.nextExpected = sub.nextExpected;
-          existing.avgDayOfMonth = sub.avgDayOfMonth;
-        }
-        if (new Date(sub.firstDate) < new Date(existing.firstDate)) {
-          existing.firstDate = sub.firstDate;
-        }
-        // Keep most active status
-        if (sub.isActive) existing.isActive = true;
-        // Keep best frequency
-        if (sub.frequency !== 'irregular' && existing.frequency === 'irregular') {
-          existing.frequency = sub.frequency;
-        }
-      } else {
-        mergedRecurring.push({ ...sub });
-      }
-    }
+    // Combine all subscriptions
+    const allSubscriptions = [...subscriptionsFromType, ...exactMatchRecurring];
 
-    // Filter out inactive subscriptions and generic labels like "Virement émis"
-    // AND only keep those in "Abonnements" category
-    const activeRecurring = mergedRecurring.filter(r => {
-      // Exclude generic labels that are not real subscriptions
-      const genericLabels = ['virement émis', 'virement recu', 'virement reçu', 'virement vers', 'retrait', 'paiement'];
+    // Filter: exclude generic labels
+    const genericLabels = ['virement émis', 'virement recu', 'virement reçu', 'virement vers', 'retrait', 'paiement'];
+    const filteredSubscriptions = allSubscriptions.filter(r => {
       const isGeneric = genericLabels.some(g => r.label.toLowerCase().includes(g));
-      
-      // Only include if category is "Abonnements" or null/undefined
-      const isSubscriptionCategory = !r.category || r.category === 'Abonnements';
-      
-      return r.frequency !== 'irregular' && r.isActive && !isGeneric && isSubscriptionCategory;
+      return !isGeneric;
     });
 
-    // Process category-based subscriptions (single transactions categorized as Abonnements)
-    const categorySubscriptions = categoryResult.rows
-      .filter(row => {
-        // Check if not already in recurring list (with tolerance for similar amounts)
-        const alreadyInRecurring = mergedRecurring.some(r => {
-          if (r.label !== row.label) return false;
-          const amountDiff = Math.abs(r.amount - parseFloat(row.amount));
-          const percentDiff = amountDiff / Math.max(r.amount, parseFloat(row.amount));
-          return percentDiff < 0.10 || amountDiff < 1.0;
-        });
-        return !alreadyInRecurring;
-      })
-      .map(row => ({
-        label: row.label,
-        amount: parseFloat(row.amount),
-        category: row.category,
-        occurrences: 1,
-        frequency: 'manual', // Manually categorized
-        avgDayOfMonth: new Date(row.last_date).getDate(),
-        firstDate: row.first_date,
-        lastDate: row.last_date,
-        nextExpected: null,
-        transactionIds: [row.id],
-        isActive: true,
-        isCategoryBased: true
-      }));
+    // Separate active and inactive
+    const activeRecurring = filteredSubscriptions.filter(r => r.isActive);
+    const expiredSubscriptions = filteredSubscriptions.filter(r => !r.isActive);
 
-    // Get shared subscriptions from partner (subscriptions marked as shared at couple level)
-    // These are subscriptions the partner has that are shared with the current user
+    // Get shared subscriptions from partner
     let partnerSharedSubscriptions = [];
     try {
-      // Get couple for this user
-      const coupleResult = await pool.query(
-        `SELECT id, user1_id, user2_id FROM couples WHERE user1_id = $1 OR user2_id = $1 LIMIT 1`,
-        [userId]
-      );
-      
-      if (coupleResult.rows.length > 0) {
-        const couple = coupleResult.rows[0];
-        const partnerId = couple.user1_id === userId ? couple.user2_id : couple.user1_id;
+      if (coupleId) {
+        const coupleResult = await pool.query(
+          `SELECT user1_id, user2_id FROM couples WHERE id = $1`,
+          [coupleId]
+        );
         
-        // Get subscription settings marked as shared where the payer is the partner
-        const sharedQuery = `
-          SELECT ss.label, ss.amount, ss.frequency, ss.payer_user_id, u.first_name as payer_name
-          FROM subscription_settings ss
-          LEFT JOIN users u ON ss.payer_user_id = u.id
-          WHERE ss.couple_id = $1 
-            AND ss.is_shared = true 
-            AND ss.payer_user_id = $2
-        `;
-        const sharedResult = await pool.query(sharedQuery, [couple.id, partnerId]);
-        
-        // Convert to subscription format
-        partnerSharedSubscriptions = sharedResult.rows.map(row => ({
-          label: row.label,
-          amount: parseFloat(row.amount),
-          category: 'Abonnements',
-          occurrences: 0,
-          frequency: row.frequency || 'monthly',
-          avgDayOfMonth: 15, // Default
-          firstDate: null,
-          lastDate: null,
-          nextExpected: null,
-          transactionIds: [],
-          isActive: true,
-          isFromPartner: true, // Flag to indicate this is from partner
-          payerName: row.payer_name
-        }));
+        if (coupleResult.rows.length > 0) {
+          const couple = coupleResult.rows[0];
+          const partnerId = couple.user1_id === userId ? couple.user2_id : couple.user1_id;
+          
+          const sharedQuery = `
+            SELECT ss.label, ss.amount, ss.frequency, ss.payer_user_id, u.first_name as payer_name
+            FROM subscription_settings ss
+            LEFT JOIN users u ON ss.payer_user_id = u.id
+            WHERE ss.couple_id = $1 
+              AND ss.is_shared = true 
+              AND ss.payer_user_id = $2
+          `;
+          const sharedResult = await pool.query(sharedQuery, [coupleId, partnerId]);
+          
+          partnerSharedSubscriptions = sharedResult.rows.map(row => ({
+            label: row.label,
+            amount: parseFloat(row.amount),
+            category: 'Abonnements',
+            occurrences: 0,
+            frequency: row.frequency || 'monthly',
+            avgDayOfMonth: 15,
+            firstDate: null,
+            lastDate: null,
+            nextExpected: null,
+            transactionIds: [],
+            isActive: true,
+            isFromPartner: true,
+            payerName: row.payer_name
+          }));
+        }
       }
     } catch (partnerErr) {
       console.error('Error fetching partner subscriptions:', partnerErr);
     }
 
-    // Merge partner subscriptions (avoid duplicates with own subscriptions)
-    const allRecurring = [...activeRecurring, ...categorySubscriptions];
-    
-    // Final merge to remove any remaining duplicates with similar amounts
+    // Final merge to avoid duplicates
     const finalRecurring = [];
-    for (const sub of allRecurring) {
+    for (const sub of activeRecurring) {
       const existing = finalRecurring.find(m => {
-        if (m.label !== sub.label) return false;
+        const normalizedExisting = normalizeLabel(m.label);
+        const normalizedSub = normalizeLabel(sub.label);
+        if (normalizedExisting !== normalizedSub) return false;
         const amountDiff = Math.abs(m.amount - sub.amount);
         const percentDiff = amountDiff / Math.max(m.amount, sub.amount);
-        return percentDiff < 0.10 || amountDiff < 1.0;
+        return percentDiff < 0.15 || amountDiff < 2.0;
       });
       
       if (existing) {
-        // Keep the one with more occurrences or update with newer data
+        // Keep the one with more occurrences
         if (sub.occurrences > existing.occurrences) {
           Object.assign(existing, sub);
         } else if (new Date(sub.lastDate) > new Date(existing.lastDate)) {
@@ -1107,12 +1272,15 @@ const getRecurringTransactions = async (req, res) => {
       }
     }
     
+    // Add partner subscriptions (avoid duplicates)
     partnerSharedSubscriptions.forEach(ps => {
       const exists = finalRecurring.some(r => {
-        if (r.label !== ps.label) return false;
+        const normalizedR = normalizeLabel(r.label);
+        const normalizedPs = normalizeLabel(ps.label);
+        if (normalizedR !== normalizedPs) return false;
         const amountDiff = Math.abs(r.amount - ps.amount);
         const percentDiff = amountDiff / Math.max(r.amount, ps.amount);
-        return percentDiff < 0.10 || amountDiff < 1.0;
+        return percentDiff < 0.15 || amountDiff < 2.0;
       });
       if (!exists) {
         finalRecurring.push(ps);
@@ -1121,8 +1289,8 @@ const getRecurringTransactions = async (req, res) => {
 
     res.status(200).json({
       recurring: finalRecurring,
-      possibleRecurring: mergedRecurring.filter(r => r.frequency === 'irregular'),
-      expiredSubscriptions: mergedRecurring.filter(r => r.frequency !== 'irregular' && !r.isActive)
+      expiredSubscriptions: expiredSubscriptions,
+      possibleRecurring: []
     });
   } catch (err) {
     console.error('Get recurring transactions error:', err);
@@ -1310,6 +1478,152 @@ const updateSubscriptionCategory = async (req, res) => {
   }
 };
 
+/**
+ * Rename an account
+ * PUT /api/transactions/accounts/:accountId/name
+ */
+const renameAccount = async (req, res) => {
+  const userId = req.user.userId;
+  const { accountId } = req.params;
+  const { name } = req.body;
+
+  if (!name || name.trim().length === 0) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  try {
+    const result = await pool.query(
+      'UPDATE accounts SET account_label = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
+      [name.trim(), accountId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    res.json({ 
+      message: 'Account renamed successfully',
+      account: result.rows[0]
+    });
+  } catch (err) {
+    console.error('Rename account error:', err);
+    res.status(500).json({ error: 'Failed to rename account' });
+  }
+};
+
+/**
+ * Toggle is_recurring status of a transaction
+ * PATCH /api/transactions/:id/recurring
+ */
+const toggleRecurring = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const { isRecurring } = req.body;
+
+    // Verify ownership and update
+    const result = await pool.query(
+      `UPDATE transactions 
+       SET is_recurring = $1
+       WHERE id = $2 AND user_id = $3
+       RETURNING id, label, is_recurring`,
+      [isRecurring, id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    // Decrypt label before returning
+    const transaction = result.rows[0];
+    transaction.label = decrypt(transaction.label);
+
+    res.status(200).json({
+      message: 'Recurring status updated',
+      transaction: transaction
+    });
+  } catch (err) {
+    console.error('Toggle recurring error:', err);
+    res.status(500).json({ error: 'Failed to update recurring status' });
+  }
+};
+
+/**
+ * Dismiss a subscription (mark all transactions with this label as NOT recurring)
+ * POST /api/transactions/subscriptions/dismiss
+ */
+const dismissSubscription = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { label } = req.body;
+
+    if (!label) {
+      return res.status(400).json({ error: 'Label is required' });
+    }
+
+    // Use label_hash for matching instead of plain text comparison
+    const labelHash = hashLabel(label);
+
+    // Mark all transactions with this label_hash as NOT recurring
+    const updateResult = await pool.query(
+      `UPDATE transactions 
+       SET is_recurring = false
+       WHERE user_id = $1 AND label_hash = $2
+       RETURNING id`,
+      [userId, labelHash]
+    );
+
+    console.log(`Subscription dismissed: "${label}" for user ${userId}, ${updateResult.rowCount} transactions updated`);
+
+    res.status(200).json({
+      message: 'Marqué comme non récurrent',
+      updatedTransactions: updateResult.rowCount,
+      label: label
+    });
+  } catch (err) {
+    console.error('Dismiss subscription error:', err);
+    res.status(500).json({ error: 'Failed to dismiss subscription' });
+  }
+};
+
+/**
+ * Restore a subscription (mark all transactions with this label as recurring)
+ * DELETE /api/transactions/subscriptions/dismiss
+ */
+const restoreSubscription = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { label } = req.body;
+
+    if (!label) {
+      return res.status(400).json({ error: 'Label is required' });
+    }
+
+    // Use label_hash for matching instead of plain text comparison
+    const labelHash = hashLabel(label);
+
+    // Mark all transactions with this label_hash as recurring again
+    const updateResult = await pool.query(
+      `UPDATE transactions 
+       SET is_recurring = true
+       WHERE user_id = $1 AND label_hash = $2
+       RETURNING id`,
+      [userId, labelHash]
+    );
+
+    console.log(`Subscription restored: "${label}" for user ${userId}, ${updateResult.rowCount} transactions updated`);
+
+    res.status(200).json({
+      message: 'Abonnement restauré',
+      updatedTransactions: updateResult.rowCount,
+      label: label
+    });
+  } catch (err) {
+    console.error('Restore subscription error:', err);
+    res.status(500).json({ error: 'Failed to restore subscription' });
+  }
+};
+
 module.exports = {
   uploadCSV,
   importTransactions,
@@ -1327,5 +1641,9 @@ module.exports = {
   getRecurringTransactions,
   getSubscriptionSettings,
   updateSubscriptionSetting,
-  updateSubscriptionCategory
+  updateSubscriptionCategory,
+  renameAccount,
+  toggleRecurring,
+  dismissSubscription,
+  restoreSubscription
 };

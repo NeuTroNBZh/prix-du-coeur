@@ -1,3 +1,13 @@
+/**
+ * Validate that a parameter is a valid positive integer ID
+ * Prevents SQL injection and parameter tampering
+ */
+const isValidId = (id) => {
+  if (id === undefined || id === null) return false;
+  const parsed = parseInt(id, 10);
+  return !isNaN(parsed) && parsed > 0 && String(parsed) === String(id);
+};
+
 const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
@@ -26,4 +36,4 @@ const validateLogin = (email, password) => {
   return errors;
 };
 
-module.exports = { isValidEmail, isValidPassword, validateRegister, validateLogin };
+module.exports = { isValidId, isValidEmail, isValidPassword, validateRegister, validateLogin };

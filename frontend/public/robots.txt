@@ -1,0 +1,94 @@
+# =====================================================
+# Robots.txt pour Prix du Cœur
+# Application de gestion de budget en couple
+# https://prixducoeur.fr
+# =====================================================
+
+# Règles par défaut pour tous les robots
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /mentions-legales
+Allow: /confidentialite
+Allow: /cgu
+Allow: /forgot-password
+
+# Bloquer les pages et ressources privées
+Disallow: /api/
+Disallow: /admin/
+Disallow: /debug*
+Disallow: /*.json$
+Disallow: /uploads/
+Disallow: /assets/*.map
+
+# Règles spécifiques pour Googlebot
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /debug*
+
+# Règles pour Googlebot-Image
+User-agent: Googlebot-Image
+Allow: /og-image.png
+Allow: /logo.png
+Allow: /icons/
+Disallow: /uploads/
+
+# Règles pour Bingbot
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+
+# Règles pour d'autres moteurs de recherche
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+# Bloquer les crawlers abusifs connus
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+User-agent: SemrushBot
+Crawl-delay: 10
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Bloquer les scrapers AI (optionnel - à adapter selon vos préférences)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+# Sitemap
+Sitemap: https://prixducoeur.fr/sitemap.xml
+
+# Délai entre les requêtes (protège le serveur)
+Crawl-delay: 1
+
+# Host préféré
+Host: https://prixducoeur.fr

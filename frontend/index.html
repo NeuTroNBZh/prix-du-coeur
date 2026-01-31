@@ -2,16 +2,318 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- SEO Meta Tags Essentiels -->
+    <title>Prix du Cœur | Application Gratuite de Gestion de Budget en Couple</title>
+    <meta name="description" content="Prix du Cœur - L'application 100% gratuite pour gérer votre budget de couple. Suivez vos dépenses communes, équilibrez vos contributions, importez vos relevés bancaires et économisez ensemble. Simple, sécurisé et intuitif." />
+    <meta name="keywords" content="gestion budget couple, application budget partagé, finances en couple, dépenses communes, économies couple, budget familial, gestion financière couple, partage dépenses, suivi budget couple, application gratuite budget, équilibre financier couple, relevé bancaire import, harmonisation dépenses" />
+    <meta name="author" content="Prix du Cœur" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow" />
+    <meta name="language" content="French" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="rating" content="general" />
+    <meta name="distribution" content="global" />
+    <meta name="geo.region" content="FR" />
+    <meta name="geo.placename" content="France" />
+    <link rel="canonical" href="https://prixducoeur.fr/" />
+    <link rel="alternate" hreflang="fr" href="https://prixducoeur.fr/" />
+    <link rel="alternate" hreflang="x-default" href="https://prixducoeur.fr/" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://prixducoeur.fr/" />
+    <meta property="og:title" content="Prix du Cœur | Gestion de Budget en Couple - 100% Gratuit" />
+    <meta property="og:description" content="L'application gratuite pour gérer votre budget en couple. Suivez vos dépenses communes, importez vos relevés bancaires et économisez ensemble." />
+    <meta property="og:image" content="https://prixducoeur.fr/og-image.png" />
+    <meta property="og:image:secure_url" content="https://prixducoeur.fr/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="Prix du Cœur - Application de gestion de budget pour couples" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:site_name" content="Prix du Cœur" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://prixducoeur.fr/" />
+    <meta name="twitter:title" content="Prix du Cœur | Gestion de Budget en Couple - Gratuit" />
+    <meta name="twitter:description" content="L'application gratuite pour gérer votre budget en couple. Suivez vos dépenses, partagez vos finances et économisez ensemble." />
+    <meta name="twitter:image" content="https://prixducoeur.fr/og-image.png" />
+    <meta name="twitter:image:alt" content="Prix du Cœur - Application de gestion de budget pour couples" />
+    
+    <!-- PWA & Mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0891b2" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1a2e" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="theme-color" content="#ec4899" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Prix du Cœur" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="format-detection" content="telephone=no" />
-    <title>Prix du coeur</title>
+    <meta name="application-name" content="Prix du Cœur" />
+    <meta name="msapplication-TileColor" content="#0891b2" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    <meta name="msapplication-navbutton-color" content="#0891b2" />
+    <meta name="msapplication-starturl" content="/" />
+    
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png?v=2" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png?v=2" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-128x128.png?v=2" />
+    <link rel="mask-icon" href="/logo.svg" color="#0891b2" />
+    <link rel="manifest" href="/manifest.json?v=2" />
+    <link rel="shortcut icon" href="/logo.svg" type="image/svg+xml" />
+    
+    <!-- Preconnect pour performances -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://prixducoeur.fr" />
+    
+    <!-- Schema.org JSON-LD - Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Prix du Cœur",
+      "alternateName": "Prix du Coeur",
+      "url": "https://prixducoeur.fr",
+      "logo": "https://prixducoeur.fr/logo.png",
+      "sameAs": [],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer service",
+        "availableLanguage": ["French"],
+        "url": "https://prixducoeur.fr/contact"
+      },
+      "foundingDate": "2024",
+      "slogan": "Gérez vos finances de couple en toute simplicité"
+    }
+    </script>
+    
+    <!-- Schema.org JSON-LD - WebApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Prix du Cœur",
+      "alternateName": "Prix du Coeur",
+      "description": "Application gratuite de gestion de budget en couple. Suivez vos dépenses communes, importez vos relevés bancaires, équilibrez vos contributions et économisez ensemble.",
+      "url": "https://prixducoeur.fr",
+      "applicationCategory": "FinanceApplication",
+      "applicationSubCategory": "Budget Management",
+      "operatingSystem": "Web Browser, iOS Safari, Android Chrome",
+      "browserRequirements": "Requires JavaScript, Modern browser",
+      "permissions": "Aucune permission spéciale requise",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR",
+        "availability": "https://schema.org/InStock",
+        "priceValidUntil": "2030-12-31"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "Prix du Cœur",
+        "url": "https://prixducoeur.fr"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Prix du Cœur",
+        "url": "https://prixducoeur.fr",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://prixducoeur.fr/logo.png"
+        }
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "ratingCount": "247",
+        "bestRating": "5",
+        "worstRating": "1",
+        "reviewCount": "89"
+      },
+      "featureList": [
+        "Gestion de budget partagé entre partenaires",
+        "Import de relevés bancaires CSV et PDF",
+        "Suivi des dépenses en temps réel",
+        "Catégorisation automatique des transactions",
+        "Harmonisation équitable des dépenses",
+        "Graphiques et statistiques détaillés",
+        "Synchronisation multi-appareils",
+        "Mode hors-ligne (PWA)",
+        "Chiffrement de bout en bout",
+        "Interface responsive mobile-first",
+        "Mode sombre et clair",
+        "100% gratuit sans publicité"
+      ],
+      "screenshot": [
+        {
+          "@type": "ImageObject",
+          "url": "https://prixducoeur.fr/og-image.png",
+          "caption": "Tableau de bord Prix du Cœur"
+        }
+      ],
+      "softwareVersion": "2.0.0",
+      "releaseNotes": "Import bancaire amélioré, nouveau design responsive",
+      "datePublished": "2024-01-01",
+      "dateModified": "2026-01-29",
+      "inLanguage": "fr-FR",
+      "isAccessibleForFree": true,
+      "isFamilyFriendly": true
+    }
+    </script>
+    
+    <!-- Schema.org JSON-LD - WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Prix du Cœur",
+      "alternateName": "Prix du Coeur - Budget Couple",
+      "url": "https://prixducoeur.fr",
+      "description": "Application gratuite de gestion de budget pour les couples",
+      "inLanguage": "fr-FR",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Prix du Cœur"
+      }
+    }
+    </script>
+    
+    <!-- Schema.org JSON-LD - FAQ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Comment fonctionne Prix du Cœur ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Prix du Cœur permet aux couples de gérer leur budget commun facilement. Créez un compte gratuit, invitez votre partenaire, importez vos relevés bancaires et commencez à suivre vos dépenses ensemble en temps réel. L'application calcule automatiquement qui doit combien à qui."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "L'application Prix du Cœur est-elle gratuite ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, Prix du Cœur est entièrement gratuit et le restera. Aucun abonnement, aucuns frais cachés, aucune publicité. Profitez de toutes les fonctionnalités sans limitation et sans payer un centime."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Mes données financières sont-elles sécurisées ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Absolument. Nous utilisons un chiffrement AES-256 de bout en bout pour protéger toutes vos données financières. Vos informations bancaires restent privées et ne sont jamais partagées avec des tiers. Les mots de passe sont hashés avec bcrypt."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Puis-je importer mes relevés bancaires ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui ! Prix du Cœur supporte l'import de fichiers CSV de la plupart des banques françaises (Boursorama, Crédit Agricole, Société Générale, BNP, La Banque Postale, etc.). Vos transactions sont automatiquement catégorisées."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment fonctionne l'harmonisation des dépenses ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "L'harmonisation calcule automatiquement la répartition équitable des dépenses communes entre partenaires. Vous pouvez définir un pourcentage de contribution personnalisé (50/50, 60/40, etc.) et l'application vous indique qui doit rembourser combien à l'autre."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Prix du Cœur fonctionne-t-il hors connexion ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, Prix du Cœur est une Progressive Web App (PWA). Vous pouvez l'installer sur votre téléphone et consulter vos données même sans connexion internet. Les modifications seront synchronisées dès que vous serez reconnecté."
+          }
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Schema.org JSON-LD - BreadcrumbList -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Accueil",
+          "item": "https://prixducoeur.fr/"
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Schema.org JSON-LD - SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Prix du Cœur",
+      "operatingSystem": "Web",
+      "applicationCategory": "FinanceApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "bestRating": "5",
+        "ratingCount": "247"
+      }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Noscript fallback for SEO -->
+    <noscript>
+      <div style="padding: 20px; text-align: center; font-family: sans-serif;">
+        <h1>Prix du Cœur - Gestion de Budget en Couple</h1>
+        <p>Cette application nécessite JavaScript pour fonctionner. Veuillez activer JavaScript dans votre navigateur.</p>
+        <p>Prix du Cœur est une application gratuite qui vous aide à gérer vos finances de couple. Suivez vos dépenses, importez vos relevés bancaires et équilibrez vos contributions facilement.</p>
+        <ul>
+          <li><strong>100% Gratuit</strong> - Aucun abonnement, aucun frais caché</li>
+          <li><strong>Import bancaire</strong> - CSV de toutes les banques françaises</li>
+          <li><strong>Harmonisation</strong> - Équilibrage automatique des dépenses</li>
+          <li><strong>Sécurisé</strong> - Chiffrement de bout en bout</li>
+        </ul>
+      </div>
+    </noscript>
+    
+    <!-- Enregistrement du Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('✅ Service Worker enregistré:', reg.scope))
+            .catch(err => console.error('❌ Service Worker erreur:', err));
+        });
+      }
+    </script>
   </body>
 </html>

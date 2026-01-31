@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "author": "Prix du Coeur",
+  "contact": "contact@neutronbzh.fr",
+  "hiring": false,
+  "languages": ["fr", "en"]
+}

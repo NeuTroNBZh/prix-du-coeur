@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+  
+  <!-- Page d'accueil - Priorité maximale -->
+  <url>
+    <loc>https://prixducoeur.fr/</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://prixducoeur.fr/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://prixducoeur.fr/" />
+    <image:image>
+      <image:loc>https://prixducoeur.fr/og-image.png</image:loc>
+      <image:title>Prix du Cœur - Application de gestion de budget en couple</image:title>
+      <image:caption>Application gratuite de gestion de budget pour les couples - Suivez vos dépenses et économisez ensemble</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://prixducoeur.fr/logo.png</image:loc>
+      <image:title>Logo Prix du Cœur</image:title>
+    </image:image>
+  </url>
+  
+  <!-- Page d'inscription - Très importante pour les conversions -->
+  <url>
+    <loc>https://prixducoeur.fr/register</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  
+  <!-- Page de connexion -->
+  <url>
+    <loc>https://prixducoeur.fr/login</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  
+  <!-- Mot de passe oublié -->
+  <url>
+    <loc>https://prixducoeur.fr/forgot-password</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+  
+  <!-- Pages légales - Importantes pour la confiance -->
+  <url>
+    <loc>https://prixducoeur.fr/mentions-legales</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>https://prixducoeur.fr/confidentialite</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <url>
+    <loc>https://prixducoeur.fr/cgu</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Note: Les pages suivantes nécessitent une authentification
+       et sont incluses pour la complétude du sitemap mais
+       ne seront pas indexées par les moteurs de recherche -->
+  
+  <!-- Tableau de bord (authentifié) -->
+  <url>
+    <loc>https://prixducoeur.fr/dashboard</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+  
+  <!-- Page des comptes (authentifié) -->
+  <url>
+    <loc>https://prixducoeur.fr/accounts</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Page d'harmonisation (authentifié) -->
+  <url>
+    <loc>https://prixducoeur.fr/harmonization</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  
+  <!-- Page profil (authentifié) -->
+  <url>
+    <loc>https://prixducoeur.fr/profile</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+  <!-- Import CSV (authentifié) -->
+  <url>
+    <loc>https://prixducoeur.fr/import</loc>
+    <lastmod>2026-01-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  
+</urlset>

@@ -1,9 +1,11 @@
 const pool = require('../config/database');
+const { isValidId } = require('../utils/validation');
 const {
   calculateBalance,
   calculateHarmonization,
   calculateCategoryBreakdown
 } = require('../services/calculationEngine');
+const { decryptTransactions } = require('../services/encryptionService');
 
 /**
  * Get harmonization report for a couple
@@ -93,7 +95,8 @@ const getHarmonization = async (req, res) => {
     query += ' ORDER BY t.date DESC';
 
     const txResult = await pool.query(query, params);
-    const transactions = txResult.rows;
+    // Decrypt labels before processing
+    const transactions = decryptTransactions(txResult.rows);
 
     // Calculate balance
     const balance = calculateBalance(transactions, user1Id, user2Id);
@@ -188,6 +191,11 @@ const updateTransactionType = async (req, res) => {
     const { id } = req.params;
     const { type, ratio } = req.body;
     const userId = req.user.userId;
+
+    // Validate ID parameter
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: 'Invalid transaction ID' });
+    }
 
     // Validate type
     const validTypes = ['commune', 'individuelle', 'abonnement', 'virement_interne'];
@@ -336,6 +344,11 @@ const deleteSettlement = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
+
+    // Validate ID parameter
+    if (!isValidId(id)) {
+      return res.status(400).json({ error: 'Invalid settlement ID' });
+    }
 
     // Check ownership via couple
     const check = await pool.query(

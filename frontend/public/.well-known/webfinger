@@ -1,0 +1,10 @@
+{
+  "subject": "acct:prixducoeur@prix-du-coeur.neutronbzh.fr",
+  "links": [
+    {
+      "rel": "self",
+      "type": "application/activity+json",
+      "href": "https://prix-du-coeur.neutronbzh.fr/"
+    }
+  ]
+}

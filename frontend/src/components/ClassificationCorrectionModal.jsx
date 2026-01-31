@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { classificationAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import { XMarkIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
 
-const TYPES = [
-  { value: 'commune', label: 'Commune', description: 'Dépense partagée entre vous' },
-  { value: 'individuelle', label: 'Individuelle', description: 'Dépense personnelle' },
-  { value: 'virement_interne', label: 'Virement interne', description: 'Entre vos propres comptes' },
+const ALL_TYPES = [
+  { value: 'commune', label: 'Commune', description: 'Dépense partagée entre vous', coupleOnly: true },
+  { value: 'individuelle', label: 'Individuelle', description: 'Dépense personnelle', coupleOnly: false },
+  { value: 'virement_interne', label: 'Virement interne', description: 'Entre vos propres comptes', coupleOnly: false },
 ];
 
 const CATEGORIES = [
@@ -30,7 +31,13 @@ export default function ClassificationCorrectionModal({
   onClose, 
   onSuccess 
 }) {
-  const [type, setType] = useState('commune');
+  const { user } = useAuth();
+  const isInCouple = user?.isInCouple === true;
+  
+  // Filter types based on couple status
+  const TYPES = ALL_TYPES.filter(t => !t.coupleOnly || isInCouple);
+  
+  const [type, setType] = useState('individuelle');
   const [category, setCategory] = useState('Autre');
   const [ratio, setRatio] = useState(50); // Pourcentage (0-100)
   const [shouldLearn, setShouldLearn] = useState(true);
@@ -40,13 +47,18 @@ export default function ClassificationCorrectionModal({
   // Update state when transaction changes
   useEffect(() => {
     if (transaction) {
-      setType(transaction.type || 'commune');
+      // For single users, convert 'commune' to 'individuelle'
+      let transactionType = transaction.type || 'individuelle';
+      if (!isInCouple && transactionType === 'commune') {
+        transactionType = 'individuelle';
+      }
+      setType(transactionType);
       setCategory(transaction.category || 'Autre');
       // Convert ratio (0-1) to percentage (0-100), default 50%
       setRatio(transaction.ratio !== undefined ? Math.round(transaction.ratio * 100) : 50);
       setError(null);
     }
-  }, [transaction]);
+  }, [transaction, isInCouple]);
 
   if (!isOpen || !transaction) return null;
 
@@ -74,15 +86,15 @@ export default function ClassificationCorrectionModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+      <div className="bg-theme-card rounded-lg shadow-xl max-w-lg w-full mx-4">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-theme-secondary">
+          <h3 className="text-lg font-medium text-theme-primary">
             Corriger la classification
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-theme-muted hover:text-theme-secondary"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
@@ -91,18 +103,18 @@ export default function ClassificationCorrectionModal({
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-4 space-y-4">
             {/* Transaction info */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-sm font-medium text-gray-900 truncate">
+            <div className="bg-theme-secondary rounded-lg p-3">
+              <p className="text-sm font-medium text-theme-primary truncate">
                 {transaction.label}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-theme-tertiary">
                 {new Date(transaction.date).toLocaleDateString('fr-FR')} • 
                 <span className={transaction.amount >= 0 ? 'text-green-600' : 'text-red-600'}>
                   {' '}{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(transaction.amount)}
                 </span>
               </p>
               {transaction.ai_confidence && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-theme-muted mt-1">
                   Confiance IA actuelle : {transaction.ai_confidence}%
                 </p>
               )}
@@ -110,7 +122,7 @@ export default function ClassificationCorrectionModal({
 
             {/* Type selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-theme-secondary mb-2">
                 Type de dépense
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -121,14 +133,14 @@ export default function ClassificationCorrectionModal({
                     onClick={() => setType(t.value)}
                     className={`p-3 rounded-lg border-2 text-left transition ${
                       type === t.value
-                        ? 'border-indigo-500 bg-indigo-50'
-                        : 'border-gray-200 hover:border-indigo-300'
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                        : 'border-theme-secondary hover:border-indigo-300'
                     }`}
                   >
-                    <p className={`text-sm font-medium ${type === t.value ? 'text-indigo-700' : 'text-gray-900'}`}>
+                    <p className={`text-sm font-medium ${type === t.value ? 'text-indigo-700 dark:text-indigo-300' : 'text-theme-primary'}`}>
                       {t.label}
                     </p>
-                    <p className="text-xs text-gray-500 mt-0.5">{t.description}</p>
+                    <p className="text-xs text-theme-tertiary mt-0.5">{t.description}</p>
                   </button>
                 ))}
               </div>
@@ -136,13 +148,13 @@ export default function ClassificationCorrectionModal({
 
             {/* Category selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-theme-secondary mb-2">
                 Catégorie
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="select-theme w-full rounded-lg border border-theme-primary shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 bg-theme-card text-theme-primary"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>{cat}</option>
@@ -153,12 +165,12 @@ export default function ClassificationCorrectionModal({
             {/* Ratio slider - only for shared expenses */}
             {type !== 'individuelle' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-theme-secondary mb-2">
                   Taux de prise en charge
                 </label>
-                <div className="bg-gray-50 rounded-lg p-4">
+                <div className="bg-theme-secondary rounded-lg p-4">
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-pink-600 font-medium">Vous: {ratio}%</span>
+                    <span className="text-pdc-cyan font-medium">Vous: {ratio}%</span>
                     <span className="text-purple-600 font-medium">Partenaire: {100 - ratio}%</span>
                   </div>
                   <input
@@ -168,14 +180,14 @@ export default function ClassificationCorrectionModal({
                     step="5"
                     value={ratio}
                     onChange={(e) => setRatio(parseInt(e.target.value))}
-                    className="w-full h-2 bg-gradient-to-r from-pink-200 to-purple-200 rounded-lg appearance-none cursor-pointer accent-pink-600"
+                    className="w-full h-2 bg-gradient-to-r from-pdc-cyan-200 to-pdc-mint-200 rounded-lg appearance-none cursor-pointer accent-pdc-cyan"
                   />
-                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                  <div className="flex justify-between text-xs text-theme-muted mt-1">
                     <span>0%</span>
                     <span>50/50</span>
                     <span>100%</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
+                  <p className="text-xs text-theme-tertiary mt-2 text-center">
                     {ratio === 50 ? 'Partage équitable' : 
                      ratio > 50 ? `Vous payez ${ratio}% de cette dépense` : 
                      `Votre partenaire paie ${100 - ratio}% de cette dépense`}
@@ -191,14 +203,14 @@ export default function ClassificationCorrectionModal({
                 id="shouldLearn"
                 checked={shouldLearn}
                 onChange={(e) => setShouldLearn(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="mt-1 h-4 w-4 rounded border-theme-primary text-indigo-600 focus:ring-indigo-500 bg-theme-card"
               />
               <label htmlFor="shouldLearn" className="ml-3">
-                <span className="flex items-center text-sm font-medium text-gray-700">
+                <span className="flex items-center text-sm font-medium text-theme-secondary">
                   <AcademicCapIcon className="h-4 w-4 mr-1 text-indigo-600" />
                   L'IA doit apprendre de cette correction
                 </span>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-theme-tertiary mt-0.5">
                   Les transactions similaires seront classifiées de la même façon à l'avenir
                 </p>
               </label>
@@ -213,11 +225,11 @@ export default function ClassificationCorrectionModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+          <div className="px-6 py-4 border-t border-theme-secondary flex justify-end space-x-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              className="px-4 py-2 text-sm font-medium text-theme-secondary hover:text-theme-primary"
             >
               Annuler
             </button>

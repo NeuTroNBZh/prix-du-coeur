@@ -1,0 +1,8 @@
+# Security Policy for Prix du Coeur
+# https://prixducoeur.fr
+
+Contact: mailto:contact@neutronbzh.fr
+Expires: 2027-01-29T00:00:00.000Z
+Preferred-Languages: fr, en
+Canonical: https://prixducoeur.fr/.well-known/security.txt
+Policy: https://prixducoeur.fr/security-policy

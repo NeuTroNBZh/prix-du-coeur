@@ -1,6 +1,7 @@
 const CreditAgricoleParser = require('./CreditAgricoleParser');
 const RevolutParser = require('./RevolutParser');
 const CMBCsvParser = require('./CMBCsvParser');
+const CICCsvParser = require('./CICCsvParser');
 
 /**
  * Parser Factory - Auto-detects CSV format and returns appropriate parser
@@ -8,6 +9,7 @@ const CMBCsvParser = require('./CMBCsvParser');
 class ParserFactory {
   static parsers = [
     RevolutParser,        // Check Revolut first (more specific header)
+    CICCsvParser,         // CIC CSV format
     CMBCsvParser,         // CMB CSV format
     CreditAgricoleParser, // Crédit Agricole
   ];

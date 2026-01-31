@@ -1,11 +1,61 @@
 @import "tailwindcss";
 
-/* Safe area for iOS devices with notch */
+/* ===== PRIX DU COEUR - THEME SYSTEM ===== */
+/* Logo Colors: #303643, #a0e8af, #eaa895, #4d97d3, #64c5db, #36554c */
+
 :root {
+  /* Brand colors from logo */
+  --pdc-dark: #303643;
+  --pdc-mint: #a0e8af;
+  --pdc-coral: #eaa895;
+  --pdc-cyan: #4d97d3;
+  --pdc-sky: #64c5db;
+  --pdc-teal: #36554c;
+  
+  /* Light mode (default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #e9ecef;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-hover: #e3f6f9;
+  
+  --text-primary: #1a1e26;
+  --text-secondary: #495057;
+  --text-tertiary: #6c757d;
+  --text-muted: #adb5bd;
+  
+  --border-primary: #dee2e6;
+  --border-secondary: #e9ecef;
+  
+  --accent-primary: var(--pdc-cyan);
+  --accent-secondary: var(--pdc-sky);
+  --accent-success: var(--pdc-mint);
+  --accent-warning: var(--pdc-coral);
+  
+  /* Safe areas for iOS */
   --sat: env(safe-area-inset-top);
   --sar: env(safe-area-inset-right);
   --sab: env(safe-area-inset-bottom);
   --sal: env(safe-area-inset-left);
+}
+
+/* Dark mode - Plus clair et contrasté */
+.dark {
+  --bg-primary: #303643;
+  --bg-secondary: #3a4150;
+  --bg-tertiary: #454d5e;
+  --bg-card: #3a4150;
+  --bg-input: #454d5e;
+  --bg-hover: #4d5567;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #e2e6eb;
+  --text-tertiary: #c9cdd4;
+  --text-muted: #9aa1ac;
+  
+  --border-primary: #5a6377;
+  --border-secondary: #4d5567;
 }
 
 body {
@@ -15,22 +65,21 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent iOS bounce scroll */
   overscroll-behavior: none;
-  /* Prevent text size adjustment on orientation change */
   -webkit-text-size-adjust: 100%;
-  padding-bottom: var(--sab);
+  /* Removed padding-bottom: var(--sab) - handled per-component now */
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 html {
-  /* Smooth scrolling */
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
 }
 
 * {
   box-sizing: border-box;
-  /* Prevent callout on long press */
   -webkit-touch-callout: none;
 }
 
@@ -59,7 +108,6 @@ textarea {
     min-height: 44px;
   }
   
-  /* Horizontal scroll container */
   .mobile-scroll-x {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -72,6 +120,247 @@ textarea {
   }
 }
 
+/* Hide scrollbar utility */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== CUSTOM SCROLLBAR - Theme Aware ===== */
+/* Thin scrollbar for Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-primary) transparent;
+}
+
+/* WebKit (Chrome, Safari, Edge) scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pdc-cyan);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Custom scrollbar class - more visible version */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pdc-cyan) var(--bg-tertiary);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--pdc-cyan), var(--pdc-sky));
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--pdc-sky), var(--pdc-cyan));
+}
+
+/* Slim scrollbar for modals and small containers */
+.slim-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) transparent;
+}
+
+.slim-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.slim-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.slim-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 10px;
+}
+
+.slim-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--pdc-cyan);
+}
+
+/* ===== CUSTOM SELECT DROPDOWNS ===== */
+/* Remove default browser styling and add custom arrow */
+select.select-theme {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236c757d'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+
+/* Light mode arrow color */
+select.select-theme {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236c757d'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
+/* Dark mode arrow color */
+.dark select.select-theme {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239aa1ac'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
+/* Active/selected state - white arrow */
+select.select-theme-active {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+
+/* Pill-style filter select */
+.select-pill {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 0.875rem;
+  padding-right: 2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.select-pill:not(.select-pill-active) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236c757d'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
+.dark .select-pill:not(.select-pill-active) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239aa1ac'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
+.select-pill.select-pill-active {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
+/* Focus state for selects */
+.select-pill:focus,
+select.select-theme:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(77, 151, 211, 0.3);
+}
+
+/* ===== UTILITY CLASSES FOR THEMING ===== */
+.bg-theme-primary { background-color: var(--bg-primary); }
+.bg-theme-secondary { background-color: var(--bg-secondary); }
+.bg-theme-tertiary { background-color: var(--bg-tertiary); }
+.bg-theme-card { background-color: var(--bg-card); }
+.bg-theme-input { background-color: var(--bg-input); }
+
+.text-theme-primary { color: var(--text-primary); }
+.text-theme-secondary { color: var(--text-secondary); }
+.text-theme-tertiary { color: var(--text-tertiary); }
+.text-theme-muted { color: var(--text-muted); }
+
+.border-theme-primary { border-color: var(--border-primary); }
+.border-theme-secondary { border-color: var(--border-secondary); }
+
+/* Divide theme colors for lists */
+.divide-theme-secondary > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-secondary);
+}
+
+/* Button styles */
+.btn-primary {
+  background-color: var(--pdc-cyan);
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+.btn-primary:hover {
+  background-color: #3a7db8;
+}
+
+.btn-secondary {
+  background-color: var(--pdc-sky);
+  color: #1a1e26;
+  transition: all 0.2s ease;
+}
+.btn-secondary:hover {
+  background-color: #52b3c9;
+}
+
+.btn-success {
+  background-color: var(--pdc-mint);
+  color: #1a1e26;
+  transition: all 0.2s ease;
+}
+.btn-success:hover {
+  background-color: #8bdf9d;
+}
+
+.btn-accent {
+  background-color: var(--pdc-coral);
+  color: #1a1e26;
+  transition: all 0.2s ease;
+}
+.btn-accent:hover {
+  background-color: #d99a88;
+}
+
+/* Input styles with theme support */
+.input-theme {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+.input-theme:focus {
+  border-color: var(--pdc-cyan);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(77, 151, 211, 0.2);
+}
+
+/* Card styles */
+.card-theme {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
 /* Fix for Safari 100vh issue */
 .min-h-screen-safe {
   min-height: 100vh;
@@ -81,4 +370,87 @@ textarea {
 /* Bottom navigation safe area */
 .pb-safe {
   padding-bottom: max(1rem, var(--sab));
+}
+
+/* Safe area for bottom navigation on iOS */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Mobile app-like experience */
+@media (max-width: 767px) {
+  /* Note: padding-bottom for bottom nav is now handled per-page with pb-28 class */
+  
+  /* Prevent body scroll bounce on iOS */
+  html, body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Better touch targets for mobile */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Full width cards on mobile */
+  .card-mobile-full {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    border-radius: 0;
+  }
+  
+  /* Hide scrollbars on mobile for cleaner look */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* PWA-ready styles */
+@media (display-mode: standalone) {
+  /* When installed as PWA */
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  /* Allow text selection in inputs */
+  input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Smooth page transitions */
+.page-transition {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Bottom sheet animation for modals on mobile */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.slide-up {
+  animation: slideUp 0.3s ease-out;
 }

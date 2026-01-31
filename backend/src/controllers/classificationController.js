@@ -4,11 +4,13 @@
  */
 
 const pool = require('../config/database');
+const { isValidId } = require('../utils/validation');
 const { 
   classifyTransactionsBatch, 
   classifyTransaction, 
   checkAPIHealth 
 } = require('../services/mistralClient');
+const { decrypt, decryptTransactions } = require('../services/encryptionService');
 
 /**
  * Get learning context from user's past corrections
@@ -23,7 +25,8 @@ const getLearningContext = async (userId) => {
        LIMIT 20`,
       [userId]
     );
-    return result.rows;
+    // Decrypt labels before returning for AI context
+    return decryptTransactions(result.rows);
   } catch (error) {
     // Table might not exist yet, return empty context
     console.log('Learning context not available:', error.message);
@@ -74,7 +77,8 @@ const classifyTransactions = async (req, res) => {
     }
 
     const transactionsResult = await pool.query(query, params);
-    const transactions = transactionsResult.rows;
+    // Decrypt labels before classification
+    const transactions = decryptTransactions(transactionsResult.rows);
 
     if (transactions.length === 0) {
       return res.status(200).json({
@@ -88,12 +92,13 @@ const classifyTransactions = async (req, res) => {
 
     // Get user info for internal transfer detection
     const userResult = await pool.query(
-      'SELECT first_name, last_name FROM users WHERE id = $1',
+      'SELECT first_name, last_name, is_in_couple FROM users WHERE id = $1',
       [userId]
     );
     const userInfo = userResult.rows[0] ? {
       firstName: userResult.rows[0].first_name,
-      lastName: userResult.rows[0].last_name
+      lastName: userResult.rows[0].last_name,
+      isInCouple: userResult.rows[0].is_in_couple !== false // default true for backwards compat
     } : null;
 
     // Get learning context for better classification
@@ -114,13 +119,15 @@ const classifyTransactions = async (req, res) => {
                category = $2,
                ai_confidence = $3,
                ai_reasoning = $4,
+               is_recurring = $5,
                classified_at = NOW()
-           WHERE id = $5 AND user_id = $6`,
+           WHERE id = $6 AND user_id = $7`,
           [
             classification.type,
             classification.category,
             classification.confidence,
             classification.reasoning,
+            classification.isRecurring || false,
             classification.transactionId,
             userId
           ]
@@ -179,6 +186,17 @@ const correctClassification = async (req, res) => {
     const userId = req.user.userId;
     const { id } = req.params;
     const { type, category, ratio, shouldLearn = true } = req.body;
+
+    // Validate ID parameter
+    if (!isValidId(id)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'ID de transaction invalide',
+          code: 'INVALID_ID'
+        }
+      });
+    }
 
     // Validate type
     const validTypes = ['commune', 'individuelle', 'abonnement', 'virement_interne'];
@@ -372,11 +390,14 @@ const getLearningEntries = async (req, res) => {
       [userId]
     );
 
+    // Decrypt labels before returning to client
+    const decryptedEntries = decryptTransactions(result.rows);
+
     res.status(200).json({
       success: true,
       data: {
-        entries: result.rows,
-        total: result.rows.length
+        entries: decryptedEntries,
+        total: decryptedEntries.length
       }
     });
   } catch (error) {
@@ -441,11 +462,234 @@ const deleteLearningEntries = async (req, res) => {
   }
 };
 
+/**
+ * Reclassify transactions (force re-classification even if already classified)
+ * POST /api/classify/reclassify
+ * Body: { mode: 'all' | 'last100' | 'last200' | 'last300' | 'last500' }
+ */
+const reclassifyTransactions = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { mode = 'all' } = req.body;
+
+    // Determine limit based on mode
+    let limit = null;
+    if (mode === 'last100') limit = 100;
+    else if (mode === 'last200') limit = 200;
+    else if (mode === 'last300') limit = 300;
+    else if (mode === 'last500') limit = 500;
+
+    // First count total transactions
+    const countResult = await pool.query(
+      'SELECT COUNT(*) as count FROM transactions WHERE user_id = $1',
+      [userId]
+    );
+    const totalTransactions = parseInt(countResult.rows[0].count);
+
+    // Build query based on mode
+    let query = `
+      SELECT id, label, amount, date
+      FROM transactions
+      WHERE user_id = $1
+      ORDER BY date DESC
+    `;
+    
+    if (limit) {
+      // Cannot exceed total transactions
+      const effectiveLimit = Math.min(limit, totalTransactions);
+      query += ` LIMIT ${effectiveLimit}`;
+    }
+
+    const transactionsResult = await pool.query(query, [userId]);
+    // Decrypt labels before classification
+    const transactions = decryptTransactions(transactionsResult.rows);
+
+    if (transactions.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          reclassified: 0,
+          message: 'Aucune transaction à reclassifier'
+        }
+      });
+    }
+
+    // Get user info
+    const userResult = await pool.query(
+      'SELECT first_name, last_name, is_in_couple FROM users WHERE id = $1',
+      [userId]
+    );
+    const userInfo = userResult.rows[0] ? {
+      firstName: userResult.rows[0].first_name,
+      lastName: userResult.rows[0].last_name,
+      isInCouple: userResult.rows[0].is_in_couple !== false
+    } : null;
+
+    // Get learning context
+    const learningContext = await getLearningContext(userId);
+
+    // Classify in batches of 50 to avoid API timeouts
+    const batchSize = 50;
+    let totalClassified = 0;
+    const allClassifications = [];
+
+    for (let i = 0; i < transactions.length; i += batchSize) {
+      const batch = transactions.slice(i, i + batchSize);
+      const classifications = await classifyTransactionsBatch(batch, learningContext, userInfo);
+      allClassifications.push(...classifications);
+    }
+
+    // Update transactions
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      for (const classification of allClassifications) {
+        await client.query(
+          `UPDATE transactions
+           SET type = $1,
+               category = $2,
+               ai_confidence = $3,
+               ai_reasoning = $4,
+               is_recurring = $5,
+               classified_at = NOW()
+           WHERE id = $6 AND user_id = $7`,
+          [
+            classification.type,
+            classification.category,
+            classification.confidence,
+            classification.reasoning,
+            classification.isRecurring || false,
+            classification.transactionId,
+            userId
+          ]
+        );
+        totalClassified++;
+      }
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        reclassified: totalClassified,
+        totalTransactions: totalTransactions,
+        mode: mode,
+        message: `${totalClassified} transaction(s) reclassifiée(s)`
+      }
+    });
+
+  } catch (error) {
+    console.error('Reclassification error:', error);
+    
+    if (error.message.includes('not configured')) {
+      return res.status(503).json({
+        success: false,
+        error: {
+          message: 'Service IA non configuré',
+          code: 'IA_NOT_CONFIGURED'
+        }
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Erreur lors de la reclassification',
+        code: 'RECLASSIFICATION_ERROR',
+        details: error.message
+      }
+    });
+  }
+};
+
+/**
+ * Reset transactions for reclassification (mark as unclassified)
+ * This allows users to then use the regular classify button multiple times
+ * POST /api/classify/reset-for-reclassify
+ * Body: { mode: 'last100' | 'last200' | 'last300' | 'last500' | 'all' }
+ */
+const resetForReclassification = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { mode = 'last100' } = req.body;
+
+    // Determine limit based on mode
+    let limit = null;
+    if (mode === 'last100') limit = 100;
+    else if (mode === 'last200') limit = 200;
+    else if (mode === 'last300') limit = 300;
+    else if (mode === 'last500') limit = 500;
+    // 'all' = no limit
+
+    // Build query to get transaction IDs to reset
+    let query = `
+      SELECT id FROM transactions
+      WHERE user_id = $1
+      ORDER BY date DESC
+    `;
+    
+    if (limit) {
+      query += ` LIMIT ${limit}`;
+    }
+
+    const transactionsResult = await pool.query(query, [userId]);
+    const transactionIds = transactionsResult.rows.map(r => r.id);
+
+    if (transactionIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          reset: 0,
+          message: 'Aucune transaction à réinitialiser'
+        }
+      });
+    }
+
+    // Reset ai_confidence to 0 for these transactions
+    const updateResult = await pool.query(
+      `UPDATE transactions 
+       SET ai_confidence = 0, 
+           ai_reasoning = NULL,
+           classified_at = NULL
+       WHERE id = ANY($1) AND user_id = $2`,
+      [transactionIds, userId]
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        reset: updateResult.rowCount,
+        message: `${updateResult.rowCount} transaction(s) marquée(s) comme à classifier. Utilisez le bouton "Classifier" pour les traiter.`
+      }
+    });
+
+  } catch (error) {
+    console.error('Reset for reclassification error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        message: 'Erreur lors de la réinitialisation',
+        code: 'RESET_ERROR',
+        details: error.message
+      }
+    });
+  }
+};
+
 module.exports = {
   classifyTransactions,
   correctClassification,
   getIAHealth,
   getClassificationStats,
   getLearningEntries,
-  deleteLearningEntries
+  deleteLearningEntries,
+  reclassifyTransactions,
+  resetForReclassification
 };

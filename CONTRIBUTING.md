@@ -6,7 +6,7 @@ Merci de votre intérêt pour contribuer à Prix du Cœur ! 🎉
 
 ### 1. Signaler un bug
 
-- Vérifiez d'abord que le bug n'a pas déjà été signalé dans les [Issues](https://github.com/votre-username/prix-du-coeur/issues)
+- Vérifiez d'abord que le bug n'a pas déjà été signalé dans les [Issues](https://github.com/NeuTroNBZh/prix-du-coeur/issues)
 - Ouvrez une nouvelle issue avec le label `bug`
 - Décrivez le problème en détail :
   - Étapes pour reproduire
@@ -29,7 +29,7 @@ Merci de votre intérêt pour contribuer à Prix du Cœur ! 🎉
 ```bash
 # Forker le projet sur GitHub
 # Puis cloner votre fork
-git clone https://github.com/votre-username/prix-du-coeur.git
+git clone https://github.com/NeuTroNBZh/prix-du-coeur.git
 cd prix-du-coeur
 ```
 

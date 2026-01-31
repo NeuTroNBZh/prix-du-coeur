@@ -10,11 +10,14 @@ vendor/
 backend/.env
 frontend/.env
 
+# Security documentation (CONFIDENTIEL)
+SECURITY-PRIVATE.md
+*.private.md
+
 # Build
 dist/
 build/
 .cache/
-.next/
 frontend/dist/
 frontend/build/
 backend/dist/
@@ -62,3 +65,6 @@ pids/
 
 # Git
 .git/index.lock
+
+# Next.js
+.next/

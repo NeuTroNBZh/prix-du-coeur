@@ -28,12 +28,24 @@ api.interceptors.request.use(
 );
 
 // Handle token expiration
+// Don't redirect on 401 for auth endpoints (login, register, 2FA, etc.)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      const url = error.config?.url || '';
+      // Ne pas rediriger si c'est une route d'authentification
+      const isAuthRoute = url.includes('/api/auth/login') || 
+                          url.includes('/api/auth/register') || 
+                          url.includes('/api/auth/2fa') ||
+                          url.includes('/api/auth/forgot-password') ||
+                          url.includes('/api/auth/reset-password');
+      
+      if (!isAuthRoute) {
+        // Seulement pour les autres routes (token expiré)
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -50,8 +62,14 @@ export const authAPI = {
   login: (data) => api.post('/api/auth/login', data),
   setup2FA: () => api.post('/api/auth/2fa/setup'),
   verify2FA: (token) => api.post('/api/auth/2fa/verify', { token }),
-  loginWith2FA: (email, password, token) => 
-    api.post('/api/auth/login/2fa', { email, password, token }),
+  disable2FA: () => api.post('/api/auth/2fa/disable'),
+  get2FAStatus: () => api.get('/api/auth/2fa/status'),
+  enableEmail2FA: () => api.post('/api/auth/2fa/enable-email'),
+  // Nouveau flux sécurisé avec pendingToken au lieu de userId
+  loginWith2FA: (pendingToken, token) => 
+    api.post('/api/auth/login/2fa', { pendingToken, token }),
+  // Email verification
+  resendVerification: () => api.post('/api/auth/resend-verification'),
 };
 
 // Transaction API
@@ -66,8 +84,13 @@ export const transactionAPI = {
   updateType: (id, data) => api.patch(`/api/transactions/${id}/type`, data),
   updateLabel: (id, label) => api.patch(`/api/transactions/${id}/label`, { label }),
   updateAmount: (id, amount) => api.patch(`/api/transactions/${id}/amount`, { amount }),
+  toggleRecurring: (id, isRecurring) => api.patch(`/api/transactions/${id}/recurring`, { isRecurring }),
   getAccounts: () => api.get('/api/transactions/accounts'),
   getTransactions: (params) => api.get('/api/transactions', { params }),
+  // Subscription management
+  getRecurring: () => api.get('/api/transactions/recurring'),
+  dismissSubscription: (label, amount, reason) => api.post('/api/transactions/subscriptions/dismiss', { label, amount, reason }),
+  restoreSubscription: (label, amount) => api.delete('/api/transactions/subscriptions/dismiss', { data: { label, amount } }),
 };
 
 // Harmonization API
@@ -89,8 +112,26 @@ export const classificationAPI = {
   classify: (transactionIds) => api.post('/api/classify', { transactionIds }),
   // Classify all unclassified transactions
   classifyAll: () => api.post('/api/classify', { all: true }),
+  // Reclassify transactions (force reclassification)
+  reclassify: (mode) => api.post('/api/classify/reclassify', { mode }),
+  // Reset transactions for reclassification (mark as unclassified)
+  resetForReclassify: (mode) => api.post('/api/classify/reset-for-reclassify', { mode }),
   // Correct a classification
   correct: (id, data) => api.patch(`/api/classify/${id}`, data),
+};
+
+// Admin API
+export const adminAPI = {
+  // Get all users
+  getUsers: () => api.get('/api/admin/users'),
+  // Get user details
+  getUserDetails: (userId) => api.get(`/api/admin/users/${userId}`),
+  // Toggle admin status
+  toggleAdmin: (userId, isAdmin) => api.patch(`/api/admin/users/${userId}/admin`, { isAdmin }),
+  // Delete a user
+  deleteUser: (userId) => api.delete(`/api/admin/users/${userId}`),
+  // Get stats overview
+  getStats: () => api.get('/api/admin/stats'),
 };
 
 export default api;

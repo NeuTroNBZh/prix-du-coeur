@@ -28,7 +28,7 @@ const transporter = createTransporter();
  * Envoie un email de réinitialisation de mot de passe
  */
 const sendPasswordResetEmail = async (email, resetToken, firstName) => {
-  const resetUrl = `${process.env.FRONTEND_URL || 'https://prix-du-coeur.neutronbzh.fr'}/reset-password?token=${resetToken}`;
+  const resetUrl = `${process.env.FRONTEND_URL || 'https://prixducoeur.fr'}/reset-password?token=${resetToken}`;
   
   const mailOptions = {
     from: `"Prix du coeur" <${process.env.SMTP_FROM || 'noreply@prix-du-coeur.fr'}>`,
@@ -363,9 +363,197 @@ Si vous ne connaissez pas ${inviterName}, ignorez cet email.
   }
 };
 
+/**
+ * Envoie un email de vérification de compte
+ */
+const sendVerificationEmail = async (email, verificationToken, firstName) => {
+  const verifyUrl = `${process.env.FRONTEND_URL || 'https://prixducoeur.fr'}/verify-email?token=${verificationToken}`;
+  
+  const mailOptions = {
+    from: `"Prix du coeur" <${process.env.SMTP_FROM || 'contact@prixducoeur.fr'}>`,
+    to: email,
+    subject: '✉️ Vérifiez votre adresse email - Prix du coeur',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%); padding: 30px; text-align: center; }
+          .header h1 { color: white; margin: 0; font-size: 28px; }
+          .content { padding: 40px 30px; }
+          .content p { color: #374151; line-height: 1.6; margin: 0 0 20px 0; }
+          .button { display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%); color: white !important; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+          .footer { background: #f3f4f6; padding: 20px 30px; text-align: center; }
+          .footer p { color: #6b7280; font-size: 12px; margin: 0; }
+          .welcome-box { background: linear-gradient(135deg, #fdf2f8 0%, #faf5ff 100%); border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center; }
+          .welcome-box .emoji { font-size: 48px; margin-bottom: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>💖 Prix du coeur</h1>
+          </div>
+          <div class="content">
+            <div class="welcome-box">
+              <div class="emoji">🎉</div>
+              <p style="font-size: 18px; color: #831843; margin: 0;">
+                Bienvenue${firstName ? ` ${firstName}` : ''} !
+              </p>
+            </div>
+            
+            <p>Merci de vous être inscrit sur Prix du coeur ! Pour finaliser votre inscription, veuillez vérifier votre adresse email en cliquant sur le bouton ci-dessous :</p>
+            
+            <p style="text-align: center;">
+              <a href="${verifyUrl}" class="button">Vérifier mon email</a>
+            </p>
+            
+            <p style="font-size: 14px; color: #6b7280;">
+              Ce lien expire dans <strong>24 heures</strong>.<br><br>
+              Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
+              <a href="${verifyUrl}" style="color: #ec4899; word-break: break-all;">${verifyUrl}</a>
+            </p>
+          </div>
+          <div class="footer">
+            <p>Cet email a été envoyé par Prix du coeur.<br>Gérez vos finances de couple en toute simplicité.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+Bienvenue${firstName ? ` ${firstName}` : ''} !
+
+Merci de vous être inscrit sur Prix du coeur !
+
+Pour finaliser votre inscription, vérifiez votre email en cliquant sur ce lien :
+${verifyUrl}
+
+Ce lien expire dans 24 heures.
+
+---
+Prix du coeur - Gérez vos finances de couple en toute simplicité
+    `
+  };
+
+  if (transporter) {
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log('✅ Email de vérification envoyé à:', email);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('❌ Erreur envoi email vérification:', error);
+      throw error;
+    }
+  } else {
+    console.log('\n========== EMAIL DE VÉRIFICATION ==========');
+    console.log('À:', email);
+    console.log('Lien:', verifyUrl);
+    console.log('============================================\n');
+    return { success: true, messageId: 'console-dev' };
+  }
+};
+
+/**
+ * Envoie un code 2FA par email
+ */
+const send2FACodeEmail = async (email, code, firstName) => {
+  const mailOptions = {
+    from: `"Prix du coeur" <${process.env.SMTP_FROM || 'contact@prixducoeur.fr'}>`,
+    to: email,
+    subject: '🔐 Votre code de connexion - Prix du coeur',
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #ec4899 0%, #a855f7 100%); padding: 30px; text-align: center; }
+          .header h1 { color: white; margin: 0; font-size: 28px; }
+          .content { padding: 40px 30px; }
+          .content p { color: #374151; line-height: 1.6; margin: 0 0 20px 0; }
+          .code-box { background: linear-gradient(135deg, #fdf2f8 0%, #faf5ff 100%); border-radius: 12px; padding: 30px; margin: 20px 0; text-align: center; }
+          .code { font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #831843; font-family: monospace; }
+          .footer { background: #f3f4f6; padding: 20px 30px; text-align: center; }
+          .footer p { color: #6b7280; font-size: 12px; margin: 0; }
+          .warning { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 20px 0; }
+          .warning p { color: #92400e; margin: 0; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔐 Code de vérification</h1>
+          </div>
+          <div class="content">
+            <p>Bonjour${firstName ? ` ${firstName}` : ''} !</p>
+            <p>Voici votre code de vérification pour vous connecter à Prix du coeur :</p>
+            
+            <div class="code-box">
+              <div class="code">${code}</div>
+            </div>
+            
+            <div class="warning">
+              <p>⏱️ Ce code expire dans <strong>10 minutes</strong>.<br>
+              🚫 Ne partagez jamais ce code avec personne.</p>
+            </div>
+            
+            <p style="font-size: 14px; color: #6b7280;">
+              Si vous n'avez pas tenté de vous connecter, ignorez cet email et changez votre mot de passe par précaution.
+            </p>
+          </div>
+          <div class="footer">
+            <p>Cet email a été envoyé par Prix du coeur.<br>Gérez vos finances de couple en toute simplicité.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+Bonjour${firstName ? ` ${firstName}` : ''} !
+
+Voici votre code de vérification pour vous connecter à Prix du coeur :
+
+${code}
+
+Ce code expire dans 10 minutes.
+Ne partagez jamais ce code avec personne.
+
+Si vous n'avez pas tenté de vous connecter, ignorez cet email et changez votre mot de passe.
+
+---
+Prix du coeur - Gérez vos finances de couple en toute simplicité
+    `
+  };
+
+  if (transporter) {
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log('✅ Code 2FA envoyé à:', email);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('❌ Erreur envoi code 2FA:', error);
+      throw error;
+    }
+  } else {
+    console.log('\n========== CODE 2FA PAR EMAIL ==========');
+    console.log('À:', email);
+    console.log('Code:', code);
+    console.log('=========================================\n');
+    return { success: true, messageId: 'console-dev' };
+  }
+};
+
 module.exports = {
   sendPasswordResetEmail,
   sendCoupleInvitationEmail,
   sendCreateAccountInvitationEmail,
+  sendVerificationEmail,
+  send2FACodeEmail,
   isEmailConfigured,
 };

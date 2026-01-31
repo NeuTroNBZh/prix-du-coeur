@@ -90,23 +90,9 @@ const callMistralAPI = async (messages, retryCount = 0) => {
 };
 
 /**
- * Classify a single transaction
- * Returns: { type, category, confidence, reasoning }
- * @param {Object} transaction - Transaction to classify
- * @param {Array} learningContext - Previous user corrections
- * @param {Object} userInfo - User info {firstName, lastName} for internal transfer detection
+ * Get system prompt for users who ARE in a couple
  */
-const classifyTransaction = async (transaction, learningContext = [], userInfo = null) => {
-  // Build dynamic user name context for internal transfer detection
-  let userNameContext = '';
-  if (userInfo && (userInfo.firstName || userInfo.lastName)) {
-    userNameContext = `\n\n🔑 INFORMATION UTILISATEUR (pour détecter les virements vers soi-même):
-- Prénom: ${userInfo.firstName || 'inconnu'}
-- Nom: ${userInfo.lastName || 'inconnu'}
-- Si un virement contient ce prénom OU ce nom dans le destinataire, c'est un VIREMENT INTERNE (vers son propre autre compte)`;
-  }
-
-  const systemPrompt = `Tu es un assistant spécialisé dans la classification des transactions bancaires pour un couple français.
+const getSystemPromptForCouple = (userNameContext) => `Tu es un assistant spécialisé dans la classification des transactions bancaires pour un couple français.
 Tu dois classifier chaque transaction en analysant ATTENTIVEMENT le libellé complet.
 
 RÈGLES D'ANALYSE DES LIBELLÉS:
@@ -124,7 +110,6 @@ C'est un virement entre les propres comptes de la même personne. Détecte ces c
 - "CREDIT AGRICOLE", "CA" combiné avec "REVOLUT", "N26" ou autre banque
 - Le mot "TRANSFERT" ou "TRANSFER" entre comptes
 - "Virement vers" suivi du PRÉNOM ou NOM de l'utilisateur (virement vers son propre compte dans une autre banque)
-- Exemples: "Virement vers Louis", "Virement vers CERCLE" si l'utilisateur s'appelle Louis Cercle
 
 Ces virements ne sont PAS des dépenses ni des revenus, ils sont neutres pour le budget.
 
@@ -168,6 +153,25 @@ CONFIANCE (0-100):
 - 50-69: Incertain, besoin de contexte utilisateur
 - <50: Vraiment pas sûr
 
+🔁 RÉCURRENT (isRecurring: true/false):
+Indique si la transaction est un paiement récurrent régulier (type abonnement ou engagement).
+MARQUE isRecurring=true pour:
+- Abonnements: Netflix, Spotify, Disney+, Amazon Prime, Apple, Basic Fit, salle de sport, téléphone/mobile
+- Factures régulières: EDF, Engie, eau, électricité, gaz
+- Loyers et charges: tout virement vers SCI, SARL immobilière, bailleur, "LOYER"
+- Assurances: MAIF, MACIF, AXA, MMA, GMF, mutuelle, CPAM (prélevé mensuellement)
+- Transport: abonnement NAVIGO, SNCF MAX, péage automatique
+- Crédits: remboursement crédit, prêt
+- Écoles/formation: frais scolaires réguliers, cantine, garderie
+- Amazon >60€ = probablement Prime annuel → isRecurring=true
+
+MARQUE isRecurring=false pour:
+- Achats ponctuels même récurrents (café quotidien, boulangerie, supermarché)
+- Virements internes
+- Achats Amazon <60€ (c'est un achat normal, pas l'abonnement)
+- Restaurants et loisirs ponctuels
+- Shopping et cadeaux
+
 ⚠️ IMPORTANT: Si l'utilisateur a corrigé des transactions similaires, RESPECTE ABSOLUMENT ses choix !
 Par exemple si "VIR SEPA SARL IMMO" a été corrigé en "commune/Logement", applique ça aux transactions similaires.
 ${userNameContext}
@@ -177,8 +181,132 @@ Réponds UNIQUEMENT en JSON valide:
   "type": "commune|individuelle|abonnement|virement_interne",
   "category": "catégorie exacte de la liste",
   "confidence": 85,
+  "isRecurring": true,
   "reasoning": "Explication courte en français"
 }`;
+
+/**
+ * Get system prompt for SINGLE users (NOT in a couple)
+ * No "commune" type allowed - everything is "individuelle" or "virement_interne"
+ */
+const getSystemPromptForSingle = (userNameContext) => `Tu es un assistant spécialisé dans la classification des transactions bancaires pour une personne célibataire en France.
+Tu dois classifier chaque transaction en analysant ATTENTIVEMENT le libellé complet.
+
+⚠️ IMPORTANT: Cette personne N'EST PAS en couple. Il n'y a JAMAIS de dépenses "commune".
+Toutes les dépenses sont individuelles ou des virements internes.
+
+RÈGLES D'ANALYSE DES LIBELLÉS:
+
+🔄 VIREMENTS INTERNES (TRÈS IMPORTANT - type=virement_interne):
+C'est un virement entre les propres comptes de la même personne. Détecte ces cas:
+- "Virement vers" suivi d'un numéro IBAN ou référence compte
+- "VIR SEPA" vers/depuis "REVOLUT", "N26", "BOURSORAMA", "FORTUNEO" (néobanques)
+- "Virement émis" vers un compte personnel
+- "TOPUP" ou "TOP UP" (rechargement de compte)
+- "From" suivi d'un prénom personnel (virement depuis son propre autre compte)
+- "Epargne", "LEP", "Livret A", "LDD", "PEL" (épargne)
+- Virements réguliers de montants ronds (100€, 200€, 500€...) vers/depuis néobanques
+- "CREDIT AGRICOLE", "CA" combiné avec "REVOLUT", "N26" ou autre banque
+- Le mot "TRANSFERT" ou "TRANSFER" entre comptes
+- "Virement vers" suivi du PRÉNOM ou NOM de l'utilisateur
+
+Ces virements ne sont PAS des dépenses ni des revenus, ils sont neutres pour le budget.
+
+Pour les VIREMENTS (VIR SEPA, Virement vers, Virement émis):
+- "SCI", "SAS", "SARL", "AGENCE", "IMMO", "HABITAT" → type=individuelle, catégorie=Logement (loyer)
+- "LOYER" dans le libellé → type=individuelle, catégorie=Logement
+- Prénom seul ou nom de personne physique → type=individuelle, catégorie=Cadeaux
+- Ton propre compte ou épargne → type=virement_interne, catégorie=Virement interne
+
+Pour les PRÉLÈVEMENTS et FACTURES:
+- "EDF", "ENGIE", "GAZ", "ÉLECTRICITÉ", "VEOLIA", "EAU" → individuelle, Logement
+- "ORANGE", "FREE", "SFR", "BOUYGUES", "TELECOM", "MOBILE" → abonnement, Abonnements
+- "NETFLIX", "SPOTIFY", "DISNEY", "AMAZON PRIME", "APPLE" → abonnement, Loisirs
+- "CPAM", "MUTUELLE", "AXA", "ALLIANZ", "MAIF" → individuelle, Santé
+- "SNCF", "RATP", "NAVIGO", "UBER", "LIME" → individuelle, Transport
+- "SALLE", "FITNESS", "SPORT", "GYM" → abonnement, Loisirs
+
+Pour les ACHATS CARTE (CB, CARTE):
+- Supermarchés: CARREFOUR, LECLERC, LIDL, ALDI, INTERMARCHE, CASINO, MONOPRIX → individuelle, Courses
+- BOULANGERIE, PATISSERIE, EPICERIE → individuelle, Courses
+- Restaurants: nom + ville, UBER EATS, DELIVEROO, JUST EAT → individuelle, Restaurant
+- Mode: ZARA, H&M, DECATHLON, KIABI, PRIMARK → individuelle, Shopping
+- AMAZON, FNAC, DARTY (électronique) → individuelle, Shopping
+- PHARMACIE, PARAPHARMACIE → individuelle, Santé
+
+RÈGLES DE TYPE (ATTENTION: PAS de "commune" car utilisateur célibataire):
+- "individuelle" = toute dépense personnelle
+- "abonnement" = prélèvement récurrent fixe mensuel (téléphone, streaming, salle de sport)
+- "virement_interne" = transfert entre ses propres comptes (n'affecte pas le budget global)
+- REVENUS: Les montants POSITIFS (salaires, remboursements) sont type="individuelle", catégorie="Revenus"
+  SAUF si c'est un virement interne (depuis un autre compte perso) → type="virement_interne"
+
+⚠️ NE JAMAIS utiliser type="commune" - L'utilisateur n'est pas en couple.
+
+CATÉGORIES POSSIBLES:
+Courses, Restaurant, Transport, Logement, Loisirs, Santé, Shopping, Abonnements, Vacances, Cadeaux, Revenus, Virement interne, Autre
+
+CONFIANCE (0-100):
+- 90-100: Mots-clés très clairs (CARREFOUR → Courses)
+- 70-89: Déduction logique mais pas certaine
+- 50-69: Incertain, besoin de contexte utilisateur
+- <50: Vraiment pas sûr
+
+🔁 RÉCURRENT (isRecurring: true/false):
+Indique si la transaction est un paiement récurrent régulier (type abonnement ou engagement).
+MARQUE isRecurring=true pour:
+- Abonnements: Netflix, Spotify, Disney+, Amazon Prime, Apple, Basic Fit, salle de sport, téléphone/mobile
+- Factures régulières: EDF, Engie, eau, électricité, gaz
+- Loyers et charges: tout virement vers SCI, SARL immobilière, bailleur, "LOYER"
+- Assurances: MAIF, MACIF, AXA, MMA, GMF, mutuelle, CPAM (prélevé mensuellement)
+- Transport: abonnement NAVIGO, SNCF MAX, péage automatique
+- Crédits: remboursement crédit, prêt
+- Écoles/formation: frais scolaires réguliers, cantine, garderie
+- Amazon >60€ = probablement Prime annuel → isRecurring=true
+
+MARQUE isRecurring=false pour:
+- Achats ponctuels même récurrents (café quotidien, boulangerie, supermarché)
+- Virements internes
+- Achats Amazon <60€ (c'est un achat normal, pas l'abonnement)
+- Restaurants et loisirs ponctuels
+- Shopping et cadeaux
+
+⚠️ IMPORTANT: Si l'utilisateur a corrigé des transactions similaires, RESPECTE ABSOLUMENT ses choix !
+${userNameContext}
+
+Réponds UNIQUEMENT en JSON valide:
+{
+  "type": "individuelle|abonnement|virement_interne",
+  "category": "catégorie exacte de la liste",
+  "confidence": 85,
+  "isRecurring": true,
+  "reasoning": "Explication courte en français"
+}`;
+
+/**
+ * Classify a single transaction
+ * Returns: { type, category, confidence, reasoning }
+ * @param {Object} transaction - Transaction to classify
+ * @param {Array} learningContext - Previous user corrections
+ * @param {Object} userInfo - User info {firstName, lastName} for internal transfer detection
+ */
+const classifyTransaction = async (transaction, learningContext = [], userInfo = null) => {
+  // Check if user is in a couple (default true for backwards compatibility)
+  const isInCouple = userInfo?.isInCouple !== false;
+  
+  // Build dynamic user name context for internal transfer detection
+  let userNameContext = '';
+  if (userInfo && (userInfo.firstName || userInfo.lastName)) {
+    userNameContext = `\n\n🔑 INFORMATION UTILISATEUR (pour détecter les virements vers soi-même):
+- Prénom: ${userInfo.firstName || 'inconnu'}
+- Nom: ${userInfo.lastName || 'inconnu'}
+- Si un virement contient ce prénom OU ce nom dans le destinataire, c'est un VIREMENT INTERNE (vers son propre autre compte)`;
+  }
+
+  // Different prompts for single users vs couples
+  const systemPrompt = isInCouple 
+    ? getSystemPromptForCouple(userNameContext)
+    : getSystemPromptForSingle(userNameContext);
 
   // Add learning context if available
   let userPrompt = `Classifie cette transaction:\n`;
@@ -215,6 +343,9 @@ Réponds UNIQUEMENT en JSON valide:
     // Force revenues (positive amounts) to be individual, UNLESS it's an internal transfer
     const isRevenue = parseFloat(transaction.amount) > 0;
     
+    // Determine if recurring (never for revenues or internal transfers)
+    const isRecurring = isInternalTransfer || isRevenue ? false : (result.isRecurring === true);
+    
     // Validate and normalize
     return {
       type: isInternalTransfer ? 'virement_interne' : (isRevenue ? 'individuelle' : (['commune', 'individuelle', 'abonnement', 'virement_interne'].includes(result.type) 
@@ -222,7 +353,8 @@ Réponds UNIQUEMENT en JSON valide:
         : 'individuelle')),
       category: isInternalTransfer ? 'Virement interne' : (isRevenue ? 'Revenus' : (result.category || 'Autre')),
       confidence: isInternalTransfer ? 90 : (isRevenue ? 95 : Math.min(100, Math.max(0, parseInt(result.confidence) || 50))),
-      reasoning: isInternalTransfer ? 'Virement entre comptes personnels' : (isRevenue ? 'Revenu automatiquement classé comme individuel' : (result.reasoning || ''))
+      reasoning: isInternalTransfer ? 'Virement entre comptes personnels' : (isRevenue ? 'Revenu automatiquement classé comme individuel' : (result.reasoning || '')),
+      isRecurring: isRecurring
     };
   } catch (parseError) {
     console.error('Failed to parse Mistral response:', response);
@@ -232,7 +364,8 @@ Réponds UNIQUEMENT en JSON valide:
       type: 'individuelle',
       category: isRevenue ? 'Revenus' : 'Autre',
       confidence: 30,
-      reasoning: 'Classification par défaut (erreur de parsing)'
+      reasoning: 'Classification par défaut (erreur de parsing)',
+      isRecurring: false
     };
   }
 };
@@ -294,17 +427,32 @@ Pour CHAQUE transaction, tu dois déterminer:
 1. TYPE: "commune" (partagée), "individuelle" (personnelle), "abonnement" (récurrent), ou "virement_interne" (entre ses propres comptes)
 2. CATÉGORIE: Courses, Restaurant, Transport, Logement, Loisirs, Santé, Shopping, Abonnements, Vacances, Cadeaux, Revenus, Virement interne, Autre
 3. CONFIANCE: 0-100
+4. isRecurring: true/false - est-ce un paiement récurrent régulier?
 
 🔄 VIREMENTS INTERNES (type=virement_interne):
 - Virements entre ses propres comptes (Revolut, N26, Boursorama, épargne...)
 - Virements où le destinataire contient le prénom ou nom de l'utilisateur
 - TOPUP, TRANSFER, transfert vers néobanque
+
+🔁 RÉCURRENT (isRecurring: true):
+- Abonnements: Netflix, Spotify, Disney+, Amazon Prime (>60€), Apple, Basic Fit, salle de sport, téléphone
+- Factures régulières: EDF, Engie, eau, électricité, gaz
+- Loyers: virement vers SCI, SARL immobilière, bailleur, "LOYER"
+- Assurances: MAIF, MACIF, AXA, mutuelle
+- Crédits et prêts
+- Frais scolaires réguliers, cantine
+
+NON RÉCURRENT (isRecurring: false):
+- Achats ponctuels (café, boulangerie, supermarché, restaurant)
+- Virements internes
+- Amazon <60€ (achat normal, pas Prime)
+- Shopping et cadeaux
 ${userNameContext}
 
 Réponds UNIQUEMENT avec un tableau JSON valide:
 [
-  {"id": 1, "type": "...", "category": "...", "confidence": 85, "reasoning": "..."},
-  {"id": 2, "type": "...", "category": "...", "confidence": 90, "reasoning": "..."}
+  {"id": 1, "type": "...", "category": "...", "confidence": 85, "isRecurring": true, "reasoning": "..."},
+  {"id": 2, "type": "...", "category": "...", "confidence": 90, "isRecurring": false, "reasoning": "..."}
 ]`;
 
   let userPrompt = `Classifie ces ${transactions.length} transactions:\n\n`;
@@ -343,6 +491,12 @@ Réponds UNIQUEMENT avec un tableau JSON valide:
       // Check if it's an internal transfer
       const isInternalTransfer = result.type === 'virement_interne' || result.category === 'Virement interne';
       
+      // Check if revenue
+      const isRevenue = parseFloat(tx.amount) > 0;
+      
+      // Determine if recurring (never for revenues or internal transfers)
+      const isRecurring = (isInternalTransfer || isRevenue) ? false : (result.isRecurring === true);
+      
       return {
         transactionId: tx.id,
         type: isInternalTransfer ? 'virement_interne' : (['commune', 'individuelle', 'abonnement', 'virement_interne'].includes(result.type)
@@ -350,7 +504,8 @@ Réponds UNIQUEMENT avec un tableau JSON valide:
           : 'commune'),
         category: isInternalTransfer ? 'Virement interne' : (result.category || 'Autre'),
         confidence: Math.min(100, Math.max(0, parseInt(result.confidence) || 50)),
-        reasoning: result.reasoning || ''
+        reasoning: result.reasoning || '',
+        isRecurring: isRecurring
       };
     });
     
@@ -363,7 +518,7 @@ Réponds UNIQUEMENT avec un tableau JSON valide:
     
     for (const tx of transactions) {
       try {
-        const result = await classifyTransaction(tx, learningContext);
+        const result = await classifyTransaction(tx, learningContext, userInfo);
         results.push({
           transactionId: tx.id,
           ...result
@@ -375,7 +530,8 @@ Réponds UNIQUEMENT avec un tableau JSON valide:
           type: 'individuelle',
           category: 'Autre',
           confidence: 0,
-          reasoning: 'Classification échouée'
+          reasoning: 'Classification échouée',
+          isRecurring: false
         });
       }
     }

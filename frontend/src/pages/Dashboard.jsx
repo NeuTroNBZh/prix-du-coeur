@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import AIClassificationPanel from '../components/AIClassificationPanel';
+import { useAuth } from '../contexts/AuthContext';
 import { harmonizationAPI, transactionAPI } from '../services/api';
 import api from '../services/api';
 import { formatCurrency, formatDate, getCategoryColor } from '../utils/helpers';
@@ -8,6 +9,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { BanknotesIcon, CreditCardIcon, CalendarDaysIcon, ChartBarIcon, ChevronLeftIcon, ChevronRightIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const isInCouple = user?.isInCouple === true; // Only show couple features if explicitly in couple
+  
   const [balance, setBalance] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,14 +91,19 @@ export default function Dashboard() {
       setAnalytics(analyticsRes.data);
       setRecurring(recurringRes.data);
       
-      // Try to fetch couple balance (may fail if no couple)
-      try {
-        const balanceRes = await harmonizationAPI.getBalance();
-        setBalance(balanceRes.data);
-      } catch (error) {
-        if (error.response?.status === 404 && error.response?.data?.error === 'No couple found') {
-          setNoCouple(true);
+      // Only try to fetch couple balance if user is in a couple
+      if (isInCouple) {
+        try {
+          const balanceRes = await harmonizationAPI.getBalance();
+          setBalance(balanceRes.data);
+        } catch (error) {
+          if (error.response?.status === 404 && error.response?.data?.error === 'No couple found') {
+            setNoCouple(true);
+          }
         }
+      } else {
+        // User is single, show personal dashboard
+        setNoCouple(true);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -139,7 +148,7 @@ export default function Dashboard() {
       <>
         <Navbar />
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pdc-cyan"></div>
         </div>
       </>
     );
@@ -173,54 +182,56 @@ export default function Dashboard() {
       <>
         <Navbar />
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-8">Tableau de bord</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-theme-primary mb-4 sm:mb-8">Tableau de bord</h1>
           
           {/* Month Navigation */}
           <div className="flex items-center justify-center gap-4 mb-6">
             <button
               onClick={goToPreviousMonth}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+              className="p-2 rounded-full bg-theme-secondary hover:bg-theme-tertiary transition-colors"
             >
-              <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+              <ChevronLeftIcon className="h-5 w-5 text-theme-secondary" />
             </button>
-            <span className="text-lg font-semibold text-gray-900 min-w-[180px] text-center capitalize">
+            <span className="text-lg font-semibold text-theme-primary min-w-[180px] text-center capitalize">
               {formatMonth(currentMonth)}
             </span>
             <button
               onClick={goToNextMonth}
               disabled={isCurrentMonth()}
-              className={`p-2 rounded-full transition-colors ${isCurrentMonth() ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200'}`}
+              className={`p-2 rounded-full transition-colors ${isCurrentMonth() ? 'bg-theme-primary text-theme-tertiary cursor-not-allowed' : 'bg-theme-secondary hover:bg-theme-tertiary'}`}
             >
-              <ChevronRightIcon className={`h-5 w-5 ${isCurrentMonth() ? 'text-gray-300' : 'text-gray-600'}`} />
+              <ChevronRightIcon className={`h-5 w-5 ${isCurrentMonth() ? 'text-theme-muted' : 'text-theme-secondary'}`} />
             </button>
           </div>
           
-          {/* Invite Partner Banner */}
-          <div className="bg-gradient-to-r from-pink-50 to-purple-50 border border-pink-200 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">Gérez vos finances en couple 💕</h2>
-                <p className="text-sm sm:text-base text-gray-600">
-                  Invitez votre partenaire pour harmoniser vos dépenses communes.
-                </p>
+          {/* Invite Partner Banner - only show if user wants to be in a couple but hasn't linked yet */}
+          {isInCouple && (
+            <div className="bg-gradient-to-r from-pdc-cyan-50 to-pdc-mint-50 dark:from-pdc-cyan-900/30 dark:to-pdc-mint-900/30 border border-pdc-cyan-200 dark:border-pdc-cyan-800 rounded-lg p-4 sm:p-6 mb-6 sm:mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-theme-primary mb-1">Gérez vos finances en couple 💕</h2>
+                  <p className="text-sm sm:text-base text-theme-secondary">
+                    Invitez votre partenaire pour harmoniser vos dépenses communes.
+                  </p>
+                </div>
+                <a 
+                  href="/profile" 
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-pdc-cyan text-white rounded-lg hover:bg-pdc-cyan-dark font-medium text-center text-sm sm:text-base"
+                >
+                  Inviter mon partenaire
+                </a>
               </div>
-              <a 
-                href="/couple" 
-                className="px-4 sm:px-6 py-2 sm:py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium text-center text-sm sm:text-base"
-              >
-                Inviter mon partenaire
-              </a>
             </div>
-          </div>
+          )}
 
           {/* Personal Stats Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="bg-theme-card overflow-hidden shadow rounded-lg">
               <div className="p-3 sm:p-5">
                 <div className="flex items-center">
                   <BanknotesIcon className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 mr-2 sm:mr-3 flex-shrink-0" />
                   <div className="min-w-0">
-                    <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Solde total</dt>
+                    <dt className="text-xs sm:text-sm font-medium text-theme-tertiary truncate">Solde total</dt>
                     <dd className={`text-lg sm:text-2xl font-semibold ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatCurrency(totalBalance)}
                     </dd>
@@ -229,12 +240,12 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="bg-theme-card overflow-hidden shadow rounded-lg">
               <div className="p-3 sm:p-5">
                 <div className="flex items-center">
-                  <CreditCardIcon className="h-6 w-6 sm:h-8 sm:w-8 text-pink-500 mr-2 sm:mr-3 flex-shrink-0" />
+                  <CreditCardIcon className="h-6 w-6 sm:h-8 sm:w-8 text-pdc-cyan-500 mr-2 sm:mr-3 flex-shrink-0" />
                   <div className="min-w-0">
-                    <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Dépenses</dt>
+                    <dt className="text-xs sm:text-sm font-medium text-theme-tertiary truncate">Dépenses</dt>
                     <dd className="text-lg sm:text-2xl font-semibold text-red-600">
                       {formatCurrency(monthlyExpenses)}
                     </dd>
@@ -243,12 +254,12 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="bg-theme-card overflow-hidden shadow rounded-lg">
               <div className="p-3 sm:p-5">
                 <div className="flex items-center">
                   <ChartBarIcon className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 mr-2 sm:mr-3 flex-shrink-0" />
                   <div className="min-w-0">
-                    <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Revenus</dt>
+                    <dt className="text-xs sm:text-sm font-medium text-theme-tertiary truncate">Revenus</dt>
                     <dd className="text-lg sm:text-2xl font-semibold text-green-600">
                       {formatCurrency(monthlyIncome)}
                     </dd>
@@ -257,16 +268,16 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="bg-theme-card overflow-hidden shadow rounded-lg">
               <div className="p-3 sm:p-5">
                 <div className="flex items-center">
-                  <CalendarDaysIcon className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 mr-2 sm:mr-3 flex-shrink-0" />
+                  <CalendarDaysIcon className="h-6 w-6 sm:h-8 sm:w-8 text-pdc-mint-500 mr-2 sm:mr-3 flex-shrink-0" />
                   <div className="min-w-0">
-                    <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">Abonnements</dt>
-                    <dd className="text-lg sm:text-2xl font-semibold text-gray-900">
+                    <dt className="text-xs sm:text-sm font-medium text-theme-tertiary truncate">Abonnements</dt>
+                    <dd className="text-lg sm:text-2xl font-semibold text-theme-primary">
                       {subscriptionCount}
                     </dd>
-                    <p className="text-xs text-gray-500 hidden sm:block">{formatCurrency(monthlySubscriptions)}/mois</p>
+                    <p className="text-xs text-theme-tertiary hidden sm:block">{formatCurrency(monthlySubscriptions)}/mois</p>
                   </div>
                 </div>
               </div>
@@ -279,7 +290,7 @@ export default function Dashboard() {
             <div className="mt-3 flex justify-end">
               <button
                 onClick={openLearningModal}
-                className="text-sm text-gray-500 hover:text-pink-600 flex items-center gap-1"
+                className="text-sm text-theme-tertiary hover:text-pdc-cyan flex items-center gap-1"
               >
                 <TrashIcon className="h-4 w-4" />
                 Gérer l'apprentissage IA
@@ -289,20 +300,20 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 gap-6 sm:gap-8 mb-6 sm:mb-8">
             {/* Accounts */}
-            <div className="bg-white shadow rounded-lg p-4 sm:p-6">
+            <div className="bg-theme-card shadow rounded-lg p-4 sm:p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Mes comptes</h2>
-                <a href="/accounts" className="text-pink-600 hover:text-pink-700 text-sm">Voir tout →</a>
+                <h2 className="text-lg sm:text-xl font-semibold text-theme-primary">Mes comptes</h2>
+                <a href="/accounts" className="text-pdc-cyan hover:text-pdc-cyan-dark text-sm">Voir tout →</a>
               </div>
               {accounts.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Aucun compte configuré</p>
+                <p className="text-theme-tertiary text-center py-4">Aucun compte configuré</p>
               ) : (
                 <div className="space-y-2 sm:space-y-3">
                   {accounts.slice(0, 4).map((account) => (
-                    <div key={account.id} className="flex justify-between items-center p-2 sm:p-3 bg-gray-50 rounded-lg">
+                    <div key={account.id} className="flex justify-between items-center p-2 sm:p-3 bg-theme-primary rounded-lg">
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{account.name}</p>
-                        <p className="text-xs sm:text-sm text-gray-500 truncate">{account.bank_name}</p>
+                        <p className="font-medium text-theme-primary text-sm sm:text-base truncate">{account.name}</p>
+                        <p className="text-xs sm:text-sm text-theme-tertiary truncate">{account.bank_name}</p>
                       </div>
                       <span className={`font-semibold text-sm sm:text-base ml-2 ${parseFloat(account.balance) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatCurrency(account.balance)}
@@ -315,8 +326,8 @@ export default function Dashboard() {
 
             {/* Category Breakdown */}
             {categoryData.length > 0 && (
-              <div className="bg-white shadow rounded-lg p-4 sm:p-6">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Dépenses par catégorie</h2>
+              <div className="bg-theme-card shadow rounded-lg p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-theme-primary mb-4">Dépenses par catégorie</h2>
                 <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
                     <Pie
@@ -341,33 +352,33 @@ export default function Dashboard() {
           </div>
 
           {/* Recent Transactions */}
-          <div className="bg-white shadow rounded-lg">
-            <div className="px-4 py-4 sm:px-6 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-base sm:text-lg font-medium text-gray-900">Transactions récentes</h3>
-              <a href="/accounts" className="text-pink-600 hover:text-pink-700 text-sm">Voir tout →</a>
+          <div className="bg-theme-card shadow rounded-lg">
+            <div className="px-4 py-4 sm:px-6 border-b border-theme-secondary flex justify-between items-center">
+              <h3 className="text-base sm:text-lg font-medium text-theme-primary">Transactions récentes</h3>
+              <a href="/accounts" className="text-pdc-cyan hover:text-pdc-cyan-dark text-sm">Voir tout →</a>
             </div>
             <div className="p-3 sm:p-4">
               {transactions.length === 0 ? (
                 <div className="text-center py-6 sm:py-8">
-                  <p className="text-gray-500 mb-4 text-sm sm:text-base">Aucune transaction importée</p>
-                  <a href="/import" className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 text-sm">
+                  <p className="text-theme-tertiary mb-4 text-sm sm:text-base">Aucune transaction importée</p>
+                  <a href="/import" className="px-4 py-2 bg-pdc-cyan text-white rounded-lg hover:bg-pdc-cyan-dark text-sm">
                     Importer mes relevés
                   </a>
                 </div>
               ) : (
-                <ul className="divide-y divide-gray-200">
+                <ul className="divide-y divide-theme-secondary">
                   {transactions.map((tx, idx) => (
                     <li key={idx} className="py-2 sm:py-3">
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <span className="text-gray-900 text-sm sm:text-base block truncate">{tx.label}</span>
-                          <span className="text-xs text-gray-500">{formatDate(tx.date)}</span>
+                          <span className="text-theme-primary text-sm sm:text-base block truncate">{tx.label}</span>
+                          <span className="text-xs text-theme-tertiary">{formatDate(tx.date)}</span>
                         </div>
                         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                           <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full hidden sm:inline-block ${getCategoryColor(tx.category)}`}>
                             {tx.category}
                           </span>
-                          <span className={`text-sm sm:text-base font-medium whitespace-nowrap ${tx.amount > 0 ? 'text-green-600' : 'text-gray-900'}`}>
+                          <span className={`text-sm sm:text-base font-medium whitespace-nowrap ${tx.amount > 0 ? 'text-green-600' : 'text-theme-primary'}`}>
                             {formatCurrency(tx.amount)}
                           </span>
                         </div>
@@ -382,30 +393,30 @@ export default function Dashboard() {
           {/* AI Learning Management Modal */}
           {showLearningModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                  <h3 className="text-lg font-semibold text-gray-900">Apprentissage IA</h3>
+              <div className="bg-theme-card rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+                <div className="px-6 py-4 border-b border-theme-secondary flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-theme-primary">Apprentissage IA</h3>
                   <button
                     onClick={() => setShowLearningModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-theme-muted hover:text-theme-secondary"
                   >
                     ✕
                   </button>
                 </div>
                 
-                <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <div className="p-6 overflow-y-auto max-h-[60vh] slim-scrollbar">
                   {learningLoading ? (
                     <div className="flex justify-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pdc-cyan"></div>
                     </div>
                   ) : learningEntries.length === 0 ? (
-                    <p className="text-center text-gray-500 py-8">
+                    <p className="text-center text-theme-tertiary py-8">
                       Aucune correction enregistrée pour l'apprentissage IA.
                     </p>
                   ) : (
                     <>
                       <div className="flex justify-between items-center mb-4">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-theme-secondary">
                           {learningEntries.length} correction(s) mémorisée(s)
                         </p>
                         <button
@@ -414,7 +425,7 @@ export default function Dashboard() {
                               deleteLearningEntries(true);
                             }
                           }}
-                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded flex items-center gap-1"
+                          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded flex items-center gap-1"
                         >
                           <TrashIcon className="h-4 w-4" />
                           Tout supprimer
@@ -425,13 +436,13 @@ export default function Dashboard() {
                         {learningEntries.map((entry) => (
                           <div 
                             key={entry.id} 
-                            className={`p-3 rounded-lg border ${selectedEntries.includes(entry.id) ? 'border-pink-300 bg-pink-50' : 'border-gray-200 bg-gray-50'}`}
+                            className={`p-3 rounded-lg border ${selectedEntries.includes(entry.id) ? 'border-pdc-cyan-300 bg-pdc-cyan-50' : 'border-theme-secondary bg-theme-primary'}`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{entry.label}</p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {entry.original_type}/{entry.original_category} → <span className="text-pink-600 font-medium">{entry.corrected_type}/{entry.corrected_category}</span>
+                                <p className="text-sm font-medium text-theme-primary truncate">{entry.label}</p>
+                                <p className="text-xs text-theme-tertiary mt-1">
+                                  {entry.original_type}/{entry.original_category} → <span className="text-pdc-cyan font-medium">{entry.corrected_type}/{entry.corrected_category}</span>
                                 </p>
                               </div>
                               <input
@@ -444,7 +455,7 @@ export default function Dashboard() {
                                     setSelectedEntries(selectedEntries.filter(id => id !== entry.id));
                                   }
                                 }}
-                                className="h-4 w-4 text-pink-600 rounded"
+                                className="h-4 w-4 text-pdc-cyan rounded"
                               />
                             </div>
                           </div>
@@ -453,7 +464,7 @@ export default function Dashboard() {
                       
                       {selectedEntries.length > 0 && (
                         <div className="mt-4 pt-4 border-t flex justify-between items-center">
-                          <span className="text-sm text-gray-600">{selectedEntries.length} sélectionné(s)</span>
+                          <span className="text-sm text-theme-secondary">{selectedEntries.length} sélectionné(s)</span>
                           <button
                             onClick={() => deleteLearningEntries(false)}
                             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm flex items-center gap-2"
@@ -467,10 +478,10 @@ export default function Dashboard() {
                   )}
                 </div>
                 
-                <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+                <div className="px-6 py-4 border-t border-theme-secondary flex justify-end">
                   <button
                     onClick={() => setShowLearningModal(false)}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    className="px-4 py-2 bg-theme-secondary text-theme-secondary rounded-lg hover:bg-theme-tertiary"
                   >
                     Fermer
                   </button>
@@ -502,37 +513,37 @@ export default function Dashboard() {
   return (
     <>
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Tableau de bord</h1>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 md:pb-8">
+        <h1 className="text-3xl font-bold text-theme-primary mb-4">Tableau de bord</h1>
 
         {/* Month Navigation */}
         <div className="flex items-center justify-center gap-4 mb-6">
           <button
             onClick={goToPreviousMonth}
-            className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+            className="p-2 rounded-full bg-theme-secondary hover:bg-theme-tertiary transition-colors"
           >
-            <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+            <ChevronLeftIcon className="h-5 w-5 text-theme-secondary" />
           </button>
-          <span className="text-lg font-semibold text-gray-900 min-w-[180px] text-center capitalize">
+          <span className="text-lg font-semibold text-theme-primary min-w-[180px] text-center capitalize">
             {formatMonth(currentMonth)}
           </span>
           <button
             onClick={goToNextMonth}
             disabled={isCurrentMonth()}
-            className={`p-2 rounded-full transition-colors ${isCurrentMonth() ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200'}`}
+            className={`p-2 rounded-full transition-colors ${isCurrentMonth() ? 'bg-theme-primary text-theme-tertiary cursor-not-allowed' : 'bg-theme-secondary hover:bg-theme-tertiary'}`}
           >
-            <ChevronRightIcon className={`h-5 w-5 ${isCurrentMonth() ? 'text-gray-300' : 'text-gray-600'}`} />
+            <ChevronRightIcon className={`h-5 w-5 ${isCurrentMonth() ? 'text-theme-tertiary' : 'text-theme-secondary'}`} />
           </button>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-theme-card overflow-hidden shadow rounded-lg">
             <div className="p-4">
               <div className="flex items-center">
                 <BanknotesIcon className="h-8 w-8 text-green-500 mr-3" />
                 <div>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Solde total</dt>
+                  <dt className="text-sm font-medium text-theme-tertiary truncate">Solde total</dt>
                   <dd className={`text-2xl font-semibold ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {formatCurrency(totalBalance)}
                   </dd>
@@ -541,12 +552,12 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-theme-card overflow-hidden shadow rounded-lg">
             <div className="p-4">
               <div className="flex items-center">
-                <CreditCardIcon className="h-8 w-8 text-pink-500 mr-3" />
+                <CreditCardIcon className="h-8 w-8 text-pdc-cyan-500 mr-3" />
                 <div>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Dépenses</dt>
+                  <dt className="text-sm font-medium text-theme-tertiary truncate">Dépenses</dt>
                   <dd className="text-2xl font-semibold text-red-600">
                     {formatCurrency(monthlyExpenses)}
                   </dd>
@@ -555,12 +566,12 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-theme-card overflow-hidden shadow rounded-lg">
             <div className="p-4">
               <div className="flex items-center">
                 <ChartBarIcon className="h-8 w-8 text-blue-500 mr-3" />
                 <div>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Revenus</dt>
+                  <dt className="text-sm font-medium text-theme-tertiary truncate">Revenus</dt>
                   <dd className="text-2xl font-semibold text-green-600">
                     {formatCurrency(monthlyIncome)}
                   </dd>
@@ -569,12 +580,12 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="bg-theme-card overflow-hidden shadow rounded-lg">
             <div className="p-4">
               <div className="flex items-center">
-                <CalendarDaysIcon className="h-8 w-8 text-purple-500 mr-3" />
+                <CalendarDaysIcon className="h-8 w-8 text-pdc-mint-500 mr-3" />
                 <div>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Balance</dt>
+                  <dt className="text-sm font-medium text-theme-tertiary truncate">Balance</dt>
                   <dd className={`text-2xl font-semibold ${monthlyIncome - monthlyExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {formatCurrency(monthlyIncome - monthlyExpenses)}
                   </dd>
@@ -590,7 +601,7 @@ export default function Dashboard() {
           <div className="mt-3 flex justify-end">
             <button
               onClick={openLearningModal}
-              className="text-sm text-gray-500 hover:text-pink-600 flex items-center gap-1"
+              className="text-sm text-theme-tertiary hover:text-pdc-cyan flex items-center gap-1"
             >
               <TrashIcon className="h-4 w-4" />
               Gérer l'apprentissage IA
@@ -600,8 +611,8 @@ export default function Dashboard() {
 
         {/* Category Breakdown */}
         {categoryData.length > 0 && (
-          <div className="bg-white shadow rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="bg-theme-card shadow rounded-lg p-6 mb-8">
+            <h2 className="text-xl font-semibold text-theme-primary mb-4">
               Dépenses par catégorie
             </h2>
             <ResponsiveContainer width="100%" height={300}>
@@ -628,21 +639,21 @@ export default function Dashboard() {
         )}
 
         {/* Recent Transactions */}
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">
+        <div className="bg-theme-card shadow rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-theme-secondary">
+            <h2 className="text-xl font-semibold text-theme-primary">
               Transactions récentes
             </h2>
           </div>
-          <ul className="divide-y divide-gray-200">
+          <ul className="divide-y divide-theme-secondary">
             {transactions.map((transaction) => (
-              <li key={transaction.id} className="px-6 py-4 hover:bg-gray-50">
+              <li key={transaction.id} className="px-6 py-4 hover:bg-theme-primary">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
+                    <p className="text-sm font-medium text-theme-primary truncate">
                       {transaction.label}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-theme-tertiary">
                       {formatDate(transaction.date)}
                     </p>
                   </div>
@@ -651,7 +662,7 @@ export default function Dashboard() {
                       {transaction.category}
                     </span>
                     <p className={`text-sm font-semibold ${
-                      transaction.amount >= 0 ? 'text-green-600' : 'text-gray-900'
+                      transaction.amount >= 0 ? 'text-green-600' : 'text-theme-primary'
                     }`}>
                       {formatCurrency(transaction.amount)}
                     </p>
@@ -665,30 +676,30 @@ export default function Dashboard() {
         {/* AI Learning Management Modal */}
         {showLearningModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-900">Apprentissage IA</h3>
+            <div className="bg-theme-card rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+              <div className="px-6 py-4 border-b border-theme-secondary flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-theme-primary">Apprentissage IA</h3>
                 <button
                   onClick={() => setShowLearningModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-theme-muted hover:text-theme-secondary"
                 >
                   ✕
                 </button>
               </div>
               
-              <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="p-6 overflow-y-auto max-h-[60vh] slim-scrollbar">
                 {learningLoading ? (
                   <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pink-600"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-pdc-cyan"></div>
                   </div>
                 ) : learningEntries.length === 0 ? (
-                  <p className="text-center text-gray-500 py-8">
+                  <p className="text-center text-theme-tertiary py-8">
                     Aucune correction enregistrée pour l'apprentissage IA.
                   </p>
                 ) : (
                   <>
                     <div className="flex justify-between items-center mb-4">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-theme-secondary">
                         {learningEntries.length} correction(s) mémorisée(s)
                       </p>
                       <button
@@ -697,7 +708,7 @@ export default function Dashboard() {
                             deleteLearningEntries(true);
                           }
                         }}
-                        className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded flex items-center gap-1"
+                        className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded flex items-center gap-1"
                       >
                         <TrashIcon className="h-4 w-4" />
                         Tout supprimer
@@ -708,13 +719,13 @@ export default function Dashboard() {
                       {learningEntries.map((entry) => (
                         <div 
                           key={entry.id} 
-                          className={`p-3 rounded-lg border ${selectedEntries.includes(entry.id) ? 'border-pink-300 bg-pink-50' : 'border-gray-200 bg-gray-50'}`}
+                          className={`p-3 rounded-lg border ${selectedEntries.includes(entry.id) ? 'border-pdc-cyan-300 bg-pdc-cyan-50' : 'border-theme-secondary bg-theme-primary'}`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{entry.label}</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {entry.original_type}/{entry.original_category} → <span className="text-pink-600 font-medium">{entry.corrected_type}/{entry.corrected_category}</span>
+                              <p className="text-sm font-medium text-theme-primary truncate">{entry.label}</p>
+                              <p className="text-xs text-theme-tertiary mt-1">
+                                {entry.original_type}/{entry.original_category} → <span className="text-pdc-cyan font-medium">{entry.corrected_type}/{entry.corrected_category}</span>
                               </p>
                             </div>
                             <input
@@ -727,7 +738,7 @@ export default function Dashboard() {
                                   setSelectedEntries(selectedEntries.filter(id => id !== entry.id));
                                 }
                               }}
-                              className="h-4 w-4 text-pink-600 rounded"
+                              className="h-4 w-4 text-pdc-cyan rounded"
                             />
                           </div>
                         </div>
@@ -736,7 +747,7 @@ export default function Dashboard() {
                     
                     {selectedEntries.length > 0 && (
                       <div className="mt-4 pt-4 border-t flex justify-between items-center">
-                        <span className="text-sm text-gray-600">{selectedEntries.length} sélectionné(s)</span>
+                        <span className="text-sm text-theme-secondary">{selectedEntries.length} sélectionné(s)</span>
                         <button
                           onClick={() => deleteLearningEntries(false)}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm flex items-center gap-2"
@@ -750,10 +761,10 @@ export default function Dashboard() {
                 )}
               </div>
               
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+              <div className="px-6 py-4 border-t border-theme-secondary flex justify-end">
                 <button
                   onClick={() => setShowLearningModal(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                  className="px-4 py-2 bg-theme-secondary text-theme-secondary rounded-lg hover:bg-theme-tertiary"
                 >
                   Fermer
                 </button>

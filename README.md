@@ -1,6 +1,6 @@
-# 💖 Prix du Cœur
+# 💖 Prix du Cœur (Price of Heart)
 
-> Application web de gestion financière pour couples et célibataires — Harmonisez vos finances facilement !
+> Shared expense manager for couples and individuals — Easily harmonize your finances!
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
@@ -9,159 +9,155 @@
 
 ---
 
-## 📋 À propos
+## 📋 About
 
-**Prix du Cœur** est une application web moderne qui automatise le suivi des dépenses partagées pour les couples, tout en offrant un tableau de bord personnel complet pour les utilisateurs célibataires.
+**Prix du Cœur** is a modern web application that automates shared expense tracking for couples, while providing a complete personal dashboard for single users.
 
-### ✨ Proposition de valeur
+### ✨ Value Proposition
 
-| Avant | Après |
-|-------|-------|
-| ⏱️ 30 minutes de rapprochement mensuel | ⚡ 5 minutes maximum |
-| 📊 Excel manuel et fastidieux | 🤖 Classification automatique par IA |
-| ❓ "Qui doit combien ?" - calculs manuels | 💰 Calcul en temps réel |
-| 📄 Import manuel des relevés | 📥 Import automatique CSV/PDF |
+| Before | After |
+|--------|-------|
+| ⏱️ 30 minutes monthly reconciliation | ⚡ 5 minutes max |
+| 📊 Manual and tedious Excel | 🤖 Automatic AI classification |
+| ❓ "Who owes what?" - manual calculations | 💰 Real-time calculation |
+| 📄 Manual statement import | 📥 Automatic CSV/PDF import |
 
 ---
 
-## 🚀 Fonctionnalités
+## 🚀 Features
 
-### 🔐 Authentification & Sécurité
-- **JWT** avec expiration configurable
-- **2FA** (TOTP via Google Authenticator / Authy ou par email)
-- **Vérification email** obligatoire
-- **Chiffrement AES-256-GCM** des données sensibles
-- **Rate limiting** et protection DDoS
+### 🔐 Authentication & Security
+- **JWT** with configurable expiration
+- **2FA** (TOTP via Google Authenticator / Authy or email)
+- **Mandatory email verification**
+- **AES-256-GCM encryption** for sensitive data
+- **Rate limiting** and DDoS protection
 
-### 💳 Gestion Bancaire
-- Import de relevés **CSV et PDF**
-- Support multi-banques : Crédit Agricole, Revolut, CMB, CIC
-- Détection automatique des doublons (checksum SHA-256)
-- Gestion de **plusieurs comptes** par utilisateur
+### 💳 Banking Management
+- Import statements from **CSV and PDF**
+- Multi-bank support: Crédit Agricole, Revolut, CMB, CIC
+- Automatic duplicate detection (SHA-256 checksum)
+- **Multiple accounts** per user
 
-### 🤖 Classification IA (Mistral AI)
-- Catégorisation automatique des transactions
-- Apprentissage adaptatif basé sur les corrections utilisateur
-- Types : Commune, Individuelle, Abonnement, Virement interne
-- 13+ catégories : Courses, Restaurant, Transport, Loisirs, etc.
+### 🤖 AI Classification (Mistral AI)
+- Automatic transaction categorization
+- Adaptive learning based on user corrections
+- Types: Shared, Individual, Subscription, Internal transfer
+- 13+ categories: Groceries, Restaurant, Transport, Entertainment, etc.
 
-### ⚖️ Harmonisation (Couples)
-- Calcul automatique "Qui doit combien ?"
-- Ratios personnalisables (50/50, 70/30, etc.)
-- Historique des règlements
-- Précision 100% via Decimal.js
+### ⚖️ Expense Harmonization (Couples)
+- Automatic "Who owes what?" calculation
+- Customizable ratios (50/50, 70/30, etc.)
+- Settlement history
+- 100% precision via Decimal.js
 
 ### 📊 Dashboard & Analytics
-- Solde total des comptes
-- Graphiques de répartition par catégorie
-- Évolution mensuelle des dépenses
-- Suivi des abonnements récurrents
+- Total account balance
+- Category distribution charts
+- Monthly expense evolution
+- Recurring subscription tracking
 
-### 🎨 Interface Moderne
-- **Dark mode** natif (système/manuel)
-- Design responsive (mobile-first)
-- Interface inspirée Apple/Google
+### 🎨 Modern Interface
+- **Dark mode** native (system/manual)
+- Responsive design (mobile-first)
+- Apple/Google inspired interface
 
 ---
 
-## 🛠️ Stack Technique
+## 🛠️ Tech Stack
 
 ### Frontend
-| Technologie | Usage |
-|-------------|-------|
-| **React 19** | Framework UI |
+| Technology | Usage |
+|------------|-------|
+| **React 19** | UI Framework |
 | **Vite** | Build tool |
 | **TailwindCSS** | Styling |
 | **React Router** | Navigation |
-| **Recharts** | Graphiques |
-| **Heroicons** | Icônes |
+| **Recharts** | Charts |
+| **Heroicons** | Icons |
 
 ### Backend
-| Technologie | Usage |
-|-------------|-------|
+| Technology | Usage |
+|------------|-------|
 | **Node.js 18+** | Runtime |
-| **Express** | Framework API |
-| **PostgreSQL 14+** | Base de données |
-| **JWT** | Authentification |
-| **Mistral AI** | Classification IA |
-| **Helmet** | Sécurité HTTP |
+| **Express** | API Framework |
+| **PostgreSQL 14+** | Database |
+| **JWT** | Authentication |
+| **Mistral AI** | AI Classification |
+| **Helmet** | HTTP Security |
 
-### Sécurité
-| Mesure | Implémentation |
-|--------|----------------|
-| Chiffrement données | AES-256-GCM |
-| Hash mots de passe | bcrypt (10 rounds) |
-| Protection API | Rate limiting |
+### Security
+| Measure | Implementation |
+|---------|----------------|
+| Data encryption | AES-256-GCM |
+| Password hashing | bcrypt (10 rounds) |
+| API protection | Rate limiting |
 | 2FA | TOTP (speakeasy) + Email |
 
 ---
 
-## 📦 Prérequis
+## 📦 Prerequisites
 
-- **Node.js** >= 18.x
-- **PostgreSQL** >= 14.x
-- **npm** ou **yarn**
-- Compte **Mistral AI** (gratuit) pour la classification IA
+- Node.js >= 18.x
+- PostgreSQL >= 14.x
+- npm or yarn
+- Mistral AI account (free) for AI classification
 
 ---
 
-## 🚀 Installation
+## 🚀 Quick Start
 
-### 1. Cloner le projet
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/NeuTroNBZh/prix-du-coeur.git
 cd prix-du-coeur
 ```
 
-### 2. Configuration de la base de données
+### 2. Database Setup
 
 ```bash
-# Se connecter à PostgreSQL
+# Connect to PostgreSQL
 sudo -u postgres psql
 
-# Créer la base de données et l'utilisateur
+# Create database and user
 CREATE DATABASE prix_du_coeur;
-CREATE USER prix_user WITH PASSWORD 'votre_mot_de_passe_securise';
+CREATE USER prix_user WITH PASSWORD 'your_secure_password';
 GRANT ALL PRIVILEGES ON DATABASE prix_du_coeur TO prix_user;
 
-# Se connecter à la base
+# Connect to database
 \c prix_du_coeur
 
-# Donner les permissions
+# Grant permissions
 GRANT ALL ON SCHEMA public TO prix_user;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO prix_user;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO prix_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO prix_user;
 
 \q
-```
 
-### 3. Appliquer les migrations
-
-```bash
-# Exécuter le schéma initial
+# Run initial schema
 psql -U prix_user -d prix_du_coeur -f database/migrations/001_initial_schema.sql
 
-# Appliquer les migrations suivantes dans l'ordre
+# Apply migrations in order
 for f in database/migrations/*.sql; do
   psql -U prix_user -d prix_du_coeur -f "$f"
 done
 ```
 
-### 4. Configuration Backend
+### 3. Backend Setup
 
 ```bash
 cd backend
 npm install
 
-# Créer le fichier de configuration
+# Create configuration file
 cp .env.example .env
 ```
 
-Éditez `backend/.env` avec vos informations :
+Edit `backend/.env` with your information:
 
-```bash
+```env
 # Server
 NODE_ENV=development
 PORT=3002
@@ -172,47 +168,47 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=prix_du_coeur
 DB_USER=prix_user
-DB_PASSWORD=votre_mot_de_passe_securise
+DB_PASSWORD=your_secure_password
 
-# JWT (générer avec: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-JWT_SECRET=votre_secret_jwt_genere
+# JWT (generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+JWT_SECRET=your_generated_jwt_secret
 JWT_EXPIRES_IN=7d
 
-# Mistral AI (obtenir sur: https://console.mistral.ai/)
-MISTRAL_API_KEY=votre_cle_api_mistral
+# Mistral AI (get at: https://console.mistral.ai/)
+MISTRAL_API_KEY=your_mistral_api_key
 MISTRAL_MODEL=mistral-small-latest
 
-# Encryption (générer avec: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
-ENCRYPTION_KEY=votre_cle_chiffrement_32_bytes_hex
+# Encryption (generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+ENCRYPTION_KEY=your_32_byte_hex_encryption_key
 
 # CORS
 CORS_ORIGIN=http://localhost:5173
 
-# Email SMTP (optionnel)
+# Email SMTP (optional)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=votre.email@gmail.com
-SMTP_PASSWORD=votre_mot_de_passe_application
-SMTP_FROM=Prix du Coeur <noreply@votredomaine.com>
+SMTP_USER=your.email@gmail.com
+SMTP_PASSWORD=your_app_password
+SMTP_FROM=Prix du Coeur <noreply@yourdomain.com>
 ```
 
-### 5. Configuration Frontend
+### 4. Frontend Setup
 
 ```bash
 cd frontend
 npm install
 
-# Créer le fichier de configuration
+# Create configuration file
 cp .env.example .env
 ```
 
-Éditez `frontend/.env` :
+Edit `frontend/.env`:
 
-```bash
+```env
 VITE_API_URL=http://localhost:3002
 ```
 
-### 6. Lancer l'application
+### 5. Launch the application
 
 ```bash
 # Terminal 1 - Backend
@@ -224,92 +220,92 @@ cd frontend
 npm run dev
 ```
 
-L'application est accessible sur **http://localhost:5173**
+The application is accessible at [http://localhost:5173](http://localhost:5173)
 
 ---
 
-## 🔧 Scripts disponibles
+## 📝 Available Scripts
 
 ### Backend
 ```bash
-npm run dev      # Démarrer en mode développement (nodemon)
-npm start        # Démarrer en production
-npm test         # Lancer les tests
+npm run dev    # Start in development mode (nodemon)
+npm start      # Start in production
+npm test       # Run tests
 ```
 
 ### Frontend
 ```bash
-npm run dev      # Démarrer le serveur de développement
-npm run build    # Build de production
-npm run preview  # Prévisualiser le build
-npm run lint     # Vérifier le code
+npm run dev      # Start development server
+npm run build    # Production build
+npm run preview  # Preview build
+npm run lint     # Check code
 ```
 
 ---
 
-## 📁 Structure du projet
+## 📁 Project Structure
 
 ```
 prix-du-coeur/
-├── 📁 frontend/                # Application React SPA
+├── 📁 frontend/              # React SPA Application
 │   └── src/
-│       ├── components/         # Composants UI réutilisables
-│       ├── contexts/           # Contextes (Auth, Theme)
-│       ├── pages/              # Pages de l'application
-│       ├── services/           # Communication API
-│       └── utils/              # Fonctions utilitaires
+│       ├── components/       # Reusable UI components
+│       ├── contexts/         # Contexts (Auth, Theme)
+│       ├── pages/            # Application pages
+│       ├── services/         # API communication
+│       └── utils/            # Utility functions
 │
-├── 📁 backend/                 # API Express
+├── 📁 backend/               # Express API
 │   └── src/
-│       ├── controllers/        # Gestionnaires de requêtes
-│       ├── middleware/         # Auth, Admin, etc.
-│       ├── routes/             # Définitions des routes
-│       ├── services/           # Logique métier (IA, Email, Chiffrement)
+│       ├── controllers/      # Request handlers
+│       ├── middleware/       # Auth, Admin, etc.
+│       ├── routes/           # Route definitions
+│       ├── services/         # Business logic (AI, Email, Encryption)
 │       └── utils/
-│           └── parsers/        # Parsers par banque (CA, Revolut, CMB, CIC)
+│           └── parsers/      # Bank parsers (CA, Revolut, CMB, CIC)
 │
 ├── 📁 database/
-│   ├── migrations/             # Scripts SQL de migration
-│   └── seeds/                  # Données initiales
+│   ├── migrations/           # SQL migration scripts
+│   └── seeds/                # Initial data
 │
-├── 📁 config/                  # Configurations Nginx, fail2ban
+├── 📁 config/                # Nginx, fail2ban configurations
 │
-└── 📁 docs/                    # Documentation technique
+└── 📁 docs/                  # Technical documentation
 ```
 
 ---
 
-## 🔐 Sécurité
+## 🔐 Security
 
-### Données chiffrées
-Les libellés des transactions sont chiffrés avec **AES-256-GCM** avant stockage en base de données. La clé de chiffrement est stockée uniquement dans le fichier `.env` (jamais en base).
+### Data Encryption
+Transaction labels are encrypted with AES-256-GCM before database storage. The encryption key is stored only in the .env file (never in the database).
 
-### Authentification
-- Mots de passe hashés avec **bcrypt** (10 salt rounds)
-- Tokens JWT avec expiration configurable
-- Support 2FA (TOTP ou Email)
-- Vérification email obligatoire
+### Authentication & Authorization
+- Passwords hashed with bcrypt (10 salt rounds)
+- JWT tokens with configurable expiration
+- 2FA support (TOTP or Email)
+- Mandatory email verification
 
-### Protection API
-- Rate limiting global (100 req/min)
-- Rate limiting strict pour les actions sensibles (10 req/min)
-- Headers de sécurité via Helmet.js
-- CORS configuré
+### API Protection
+- Global rate limiting (100 req/min)
+- Strict rate limiting for sensitive actions (10 req/min)
+- Security headers via Helmet.js
+- Configured CORS
 
-### Fichiers sensibles
-Les fichiers suivants ne doivent **JAMAIS** être commités :
-- `backend/.env` - Clés API et d'encryption
-- `frontend/.env` - Configuration locale
-- `SECURITY-PRIVATE.md` - Rapport d'audit
+### Sensitive Files
+The following files must NEVER be committed:
+- `backend/.env` - API and encryption keys
+- `frontend/.env` - Local configuration
+- `SECURITY-PRIVATE.md` - Audit report
 
-Ces fichiers sont automatiquement exclus via `.gitignore`.
+These files are automatically excluded via .gitignore.
 
 ---
 
-## 🏦 Banques supportées
+## 🏦 Supported Banks
 
-| Banque | CSV | PDF |
-|--------|-----|-----|
+| Bank | CSV | PDF |
+|------|-----|-----|
 | Crédit Agricole | ✅ | ✅ |
 | Revolut | ✅ | ❌ |
 | Crédit Mutuel de Bretagne | ✅ | ✅ |
@@ -318,52 +314,42 @@ Ces fichiers sont automatiquement exclus via `.gitignore`.
 
 ---
 
-## 📖 Documentation
+## 📚 Documentation
 
-- [Guide de déploiement](DEPLOYMENT.md)
-- [Guide de contribution](CONTRIBUTING.md)
-- [Architecture de chiffrement](docs/ENCRYPTION.md)
-- [Description complète](docs/DESCRIPTION-COMPLETE-SITE.md)
+- [Deployment Guide](/NeuTroNBZh/prix-du-coeur/blob/main/DEPLOYMENT.md)
+- [Contributing Guide](/NeuTroNBZh/prix-du-coeur/blob/main/CONTRIBUTING.md)
+- [Encryption Architecture](/NeuTroNBZh/prix-du-coeur/blob/main/docs/ENCRYPTION.md)
+- [Full Description](/NeuTroNBZh/prix-du-coeur/blob/main/docs/DESCRIPTION-COMPLETE-SITE.md)
 
 ---
 
-## 🤝 Contribution
+## 🤝 Contributing
 
-Les contributions sont les bienvenues ! Consultez le [guide de contribution](CONTRIBUTING.md) pour commencer.
+Contributions are welcome! Check out the [contributing guide](/NeuTroNBZh/prix-du-coeur/blob/main/CONTRIBUTING.md) to get started.
 
 ```bash
-# Fork le projet
-# Créer une branche
-git checkout -b feature/ma-fonctionnalite
+# Fork the project
+# Create a branch
+git checkout -b feature/my-feature
 
 # Commit
-git commit -m "feat: ajout de ma fonctionnalité"
+git commit -m "feat: add my feature"
 
-# Push et créer une Pull Request
-git push origin feature/ma-fonctionnalite
+# Push and create a Pull Request
+git push origin feature/my-feature
 ```
 
 ---
 
-## 📄 Licence
+## 📜 License
 
-Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de détails.
-
----
-
-## 🙏 Remerciements
-
-- [Mistral AI](https://mistral.ai/) pour l'API de classification
-- [TailwindCSS](https://tailwindcss.com/) pour le framework CSS
-- [Recharts](https://recharts.org/) pour les graphiques
-- La communauté open source
+This project is under MIT License. See the [LICENSE](/NeuTroNBZh/prix-du-coeur/blob/main/LICENSE) file for more details.
 
 ---
 
-<div align="center">
+## 🙏 Acknowledgments
 
-**Fait avec 💖 par NeuTroNBZh aidé par l'IA**
-
-[Signaler un bug](https://github.com/NeuTroNBZh/prix-du-coeur/issues) · [Proposer une fonctionnalité](https://github.com/NeuTroNBZh/prix-du-coeur/issues)
-
-</div>
+- [Mistral AI](https://mistral.ai/) for the classification API
+- [TailwindCSS](https://tailwindcss.com/) for the CSS framework
+- [Recharts](https://recharts.org/) for the charts
+- The open source community

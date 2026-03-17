@@ -373,3 +373,7 @@ MIT
 
 ## Support
 For support, contact us.
+
+## Roadmap
+- Feature 1
+- Feature 2

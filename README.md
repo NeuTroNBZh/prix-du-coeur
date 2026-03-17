@@ -370,3 +370,6 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de 
 
 ## License
 MIT
+
+## Support
+For support, contact us.

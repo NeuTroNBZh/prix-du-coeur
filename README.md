@@ -367,3 +367,6 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de 
 [Signaler un bug](https://github.com/NeuTroNBZh/prix-du-coeur/issues) · [Proposer une fonctionnalité](https://github.com/NeuTroNBZh/prix-du-coeur/issues)
 
 </div>
+
+## License
+MIT
